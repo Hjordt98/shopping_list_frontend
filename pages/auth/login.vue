@@ -42,8 +42,9 @@ const password = ref('')
 
 const handleLogin = async () => {
   try {
+    await $fetch('http://localhost:8000/sanctum/csrf-cookie', { credentials: 'include' })
     await login({ email: email.value, password: password.value })
-    navigateTo('/auth/index') 
+    navigateTo('/')
   } catch (error) {
     alert('Login failed. Please check your credentials.')
     console.error('Login error:', error)
