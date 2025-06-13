@@ -2,6 +2,8 @@
     <div class="drawer lg:drawer-open">
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
+            <!-- Sign Out button at top right -->
+            <button @click="handleSignOut" class="btn btn-ghost absolute top-0 right-0 mt-6 mr-10">Sign Out</button>
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
                 <div v-if="showDeleteSuccess" role="alert"
                     class="alert alert-success absolute left-1/2 -translate-x-1/2 -top-15 z-50 scale-125">
@@ -55,38 +57,38 @@
                         overflow-x: hidden;        /* Prevents horizontal scroll */
                         overflow-y: auto;          /* Allows vertical scroll if content overflows */
                     " v-model="textareaValue"></textarea>
-                       <button @click=" deleteList(selectedListId)"
-                    class="btn btn-ghost btn absolute bottom-0 right-0 mb-10 mr-10">delete</button>
+
+                <button @click="deleteList(selectedListId)"
+                    class="btn btn-ghost absolute bottom-0 right-0 mb-10 mr-10">Delete</button>
             </div>
-         
+
         </div>
         <div class=" drawer-side">
             <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">Shopping List</h1>
             <div class="w-full">
                 <button class="btn mb-4 mx-auto block border-2 border-gray-300 rounded-md" @click="createNewList">Create
                     new list</button>
-                <button @click="handleSignOut">Sign Out</button>
             </div>
 
             <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
 
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
-       
+
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id">
                     <a @click="handleListClick(list.id)"> {{ truncateListName(list.name) }} </a>
-                    </li>
-                </ul>
-   
+                </li>
+            </ul>
+
 
             <h1 class="text-1xl ml-3 mb-2">Older than 3 days</h1>
-        
+
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in olderList" :key="list.id">
                     <a @click="handleListClick(list.id)">{{ truncateListName(list.name) }}</a>
                 </li>
             </ul>
-            
+
 
             <h1 class="text-1xl ml-3 mb-2">Favorites</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
@@ -308,7 +310,7 @@ async function deleteList(id) {
 
     } catch (error) {
         console.error('Error deleting list:', error);
-        
+
 
         alert('Error creating new list. Please try again.');
     }
