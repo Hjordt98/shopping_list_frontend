@@ -3,7 +3,25 @@
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4">
-                <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">{{selectedList?.name || 'Shopping List'}}</h1>
+                <textarea
+                    class="
+                        textarea textarea-ghost    <!-- Base textarea styles -->
+                        bg-base-200               <!-- Background color -->
+                        border                    <!-- Border -->
+                        border-gray-400           <!-- Border color -->
+                        rounded-lg                <!-- Rounded corners -->
+                        p-4                       <!-- Padding -->
+                        text-lg                   <!-- Text size -->
+                        resize-none               <!-- Prevent resizing -->
+                        focus:outline-none        <!-- Remove focus outline -->
+                        focus:ring-2              <!-- Focus ring width -->
+                        max-w-6xl
+                        w-full
+                        focus:ring-primary        <!-- Focus ring color -->
+                        mb-8                      <!-- Bottom margin -->
+                        text-center
+                    "
+                    placeholder="Name of shopping list" v-model="selectedListName"></textarea>
                 <textarea placeholder="Type here" class="
                         bg-base-200                <!-- Background color (from your theme) -->
                         border                     <!-- Adds a border -->
@@ -20,11 +38,10 @@
                         box-sizing: border-box;    /* Ensures padding/border are included in width/height */
                         overflow-x: hidden;        /* Prevents horizontal scroll */
                         overflow-y: auto;          /* Allows vertical scroll if content overflows */
-                    " v-model="textareaValue" 
-                    "></textarea>
+                    " v-model="textareaValue" "></textarea>
             </div>
         </div>
-        <div class="drawer-side">
+        <div class=" drawer-side">
             <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">Shopping List</h1>
             <div class="w-full">
                 <button class="btn mb-4 mx-auto block border-2 border-gray-300 rounded-md" @click="createNewList">Create
@@ -37,16 +54,18 @@
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id">
-                    <a @click="handleListClick(list.id)"> {{ list.name }} </a>
+                    <a @click="handleListClick(list.id)"> {{ truncateListName(list.name) }} </a>
                 </li>
             </ul>
 
             <h1 class="text-1xl ml-3 mb-2">Older than 3 days</h1>
+        
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in olderList" :key="list.id">
-                    <a>{{ list.name }}</a>
+                    <a @click="handleListClick(list.id)">{{ truncateListName(list.name) }}</a>
                 </li>
             </ul>
+            
 
             <h1 class="text-1xl ml-3 mb-2">Favorites</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
@@ -69,10 +88,8 @@ const { logout } = useSanctumAuth()
 const shoppingLists = ref([])
 const textareaValue = ref('')
 const selectedListId = ref(null)
+const selectedListName = ref('')
 
-const selectedList = computed(() =>{
-    return shoppingLists.value.find(list => list.id === selectedListId.value)
-})
 
 
 const todayAndYesterday = computed(() => {
@@ -121,23 +138,30 @@ const debouncedSaveList = useDebounceFn(async () => {
             method: 'PATCH',
             headers: {
                 'Accept': 'application/json',
-                'X-XSRF-TOKEN': xsrfToken        
+                'X-XSRF-TOKEN': xsrfToken
             },
             body: {
                 text: textareaValue.value,
-
+                name: selectedListName.value
             },
             credentials: 'include'
         });
+        // Update the local list with the new text so UI stays in sync
         const list = shoppingLists.value.find(list => list.id === selectedListId.value)
-        if (list) list.text = textareaValue.value
+        if (list) 
+        list.text = textareaValue.value
+        list.name = selectedListName
     } catch (error) {
         console.error('Error updating list:', error)
     }
 }, 1000)
 
 watch(textareaValue, () => {
-  if (selectedListId.value) debouncedSaveList()
+    if (selectedListId.value) debouncedSaveList()
+})
+
+watch(selectedListName, () => {
+    if (selectedListId.value) debouncedSaveList()
 })
 
 // Fetch shopping lists on mount
@@ -208,10 +232,11 @@ function handleListClick(listId) {
     const list = shoppingLists.value.find(list => list.id === listId)
     // set textare to the list's text (or empty if not found)
     textareaValue.value = list?.text || ''
+    selectedListName.value = list?.name || 'New Shopping List'
 }
 
 // helper function to get the CSRF token from the cookie
-async function getCsrfToken(){
+async function getCsrfToken() {
     // Ensure the CSRF cookie is set
     await $fetch('http://localhost:8000/sanctum/csrf-cookie')
 
@@ -222,5 +247,10 @@ async function getCsrfToken(){
     return null;
 }
 
+// function to truncate the list name if it is too long
+function truncateListName(name) {
+    if (name.length < 20) return name
+    return name.slice(0, 20) + '...'
+}
 
 </script>
