@@ -2,7 +2,25 @@
     <div class="drawer lg:drawer-open">
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
-            <div class="flex flex-col items-center justify-center w-full mt-10 px-4">
+            <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
+                <div v-if="showDeleteSuccess" role="alert"
+                    class="alert alert-success absolute left-1/2 -translate-x-1/2 -top-15 z-50 scale-125">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Shopping list deleted!</span>
+                </div>
+                <div v-if="showCreateSuccess" role="alert"
+                    class="alert alert-success absolute left-1/2 -translate-x-1/2 -top-15 z-50 scale-125">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Shopping list created!</span>
+                </div>
                 <textarea class="
                         textarea textarea-ghost    <!-- Base textarea styles -->
                         bg-base-200               <!-- Background color -->
@@ -37,7 +55,8 @@
                         overflow-x: hidden;        /* Prevents horizontal scroll */
                         overflow-y: auto;          /* Allows vertical scroll if content overflows */
                     " v-model="textareaValue" "></textarea>
-                       <button @click="deleteList(selectedListId)" class="btn btn-ghost btn absolute bottom-0 right-0 mb-10 mr-10">delete</button>
+                       <button @click=" deleteList(selectedListId)"
+                    class="btn btn-ghost btn absolute bottom-0 right-0 mb-10 mr-10">delete</button>
             </div>
          
         </div>
@@ -91,7 +110,8 @@ const shoppingLists = ref([])
 const textareaValue = ref('')
 const selectedListId = ref(null)
 const selectedListName = ref('')
-
+const showDeleteSuccess = ref(false)
+const showCreateSuccess = ref(false)
 
 
 const todayAndYesterday = computed(() => {
@@ -152,7 +172,7 @@ const debouncedSaveList = useDebounceFn(async () => {
         const list = shoppingLists.value.find(list => list.id === selectedListId.value)
         if (list)
             list.text = textareaValue.value
-        list.name = selectedListName
+        list.name = selectedListName.value
     } catch (error) {
         console.error('Error updating list:', error)
     }
@@ -209,7 +229,9 @@ async function createNewList() {
             credentials: 'include'
         });
 
-        alert('Shopping list created!');
+        shoppingLists.value.push(newList)
+        showCreateSuccess.value = true
+        setTimeout(() => showCreateSuccess.value = false, 3000) // Hide after 3 seconds
 
     } catch (error) {
         console.error('Error creating new list:', error);
@@ -280,9 +302,9 @@ async function deleteList(id) {
             },
             credentials: 'include'
         });
-
-        alert('Shopping list deleted!');
-        window.location.reload();
+        shoppingLists.value = shoppingLists.value.filter(list => list.id !== id)
+        showDeleteSuccess.value = true
+        setTimeout(() => showDeleteSuccess.value = false, 3000) // Hide after 3 seconds
 
     } catch (error) {
         console.error('Error deleting list:', error);
