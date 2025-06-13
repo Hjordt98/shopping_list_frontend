@@ -3,9 +3,24 @@
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4">
-                <textarea placeholder="Type here"
-                    class="bg-base-200 border border-gray-400 rounded-lg p-4 text-lg w-full max-w-6xl h-[675px] resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                    style="box-sizing: border-box; overflow-x: hidden; overflow-y: auto;"></textarea>
+                <textarea placeholder="Type here" class="
+                        bg-base-200                <!-- Background color (from your theme) -->
+                        border                     <!-- Adds a border -->
+                        border-gray-400            <!-- Border color -->
+                        rounded-lg                 <!-- Large rounded corners -->
+                        p-4                        <!-- Padding on all sides -->
+                        text-lg                    <!-- Large text size -->
+                        w-full                     <!-- Full width of parent -->
+                        max-w-6xl                  <!-- Maximum width (very wide, but responsive) -->
+                        h-[675px]                  <!-- Fixed height: 675px -->
+                        resize-none                <!-- Prevents user from resizing the textarea -->
+                        focus:outline-none         <!-- Removes default focus outline -->
+                    " style="
+                        box-sizing: border-box;    /* Ensures padding/border are included in width/height */
+                        overflow-x: hidden;        /* Prevents horizontal scroll */
+                        overflow-y: auto;          /* Allows vertical scroll if content overflows */
+                    " v-model="textareaValue" 
+                    "></textarea>
             </div>
         </div>
         <div class="drawer-side">
@@ -21,7 +36,7 @@
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id">
-                    <a> {{ list.name }} </a>
+                    <a @click="handleListClick(list.id)"> {{ list.name }} </a>
                 </li>
             </ul>
 
@@ -41,15 +56,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+
+// imports
+import { ref, onMounted, computed, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 
+// useSanctumAuth hook to handle authentication
 const { logout } = useSanctumAuth()
 
-// ref to handle computed properties
+// computed properties
 const shoppingLists = ref([])
+const textareaValue = ref('')
+const selectedListId = ref(null)
 
-// computed properties for today and yesterday
 const todayAndYesterday = computed(() => {
     const now = new Date();
     // Get UTC timestamp for now
@@ -76,14 +95,60 @@ const olderList = computed(() => {
         .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 })
 
+const debouncedSaveList = useDebounceFn(async () => {
+    if (!selectedListId.value) return;
+    try {
+        // Get CSRF cookie
+        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
+            credentials: 'include'
+        });
 
-// Helper function to get CSRF token from cookie
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-}
+        // Get the CSRF token from the cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        const xsrfToken = getCookie('XSRF-TOKEN');
 
+        await $fetch(`http://localhost:8000/api/shopping-lists/${selectedListId.value}`, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken        
+            },
+            body: {
+                text: textareaValue.value,
+
+            },
+            credentials: 'include'
+        });
+        const list = shoppingLists.value.find(list => list.id === selectedListId.value)
+        if (list) list.text = textareaValue.value
+    } catch (error) {
+        console.error('Error updating list:', error)
+    }
+}, 1000)
+
+watch(textareaValue, () => {
+  if (selectedListId.value) debouncedSaveList()
+})
+
+// Fetch shopping lists on mount
+onMounted(async () => {
+    try {
+        const response = await $fetch('http://localhost:8000/api/shopping-lists', {
+            credentials: 'include'
+        })
+        shoppingLists.value = response
+        console.log(response)
+    } catch (error) {
+        console.error('Error fetching shopping lists:', error)
+        alert('Error loading shopping lists. Please try again.')
+    }
+})
+
+// Create new list
 async function createNewList() {
     try {
         // Get CSRF cookie
@@ -92,7 +157,12 @@ async function createNewList() {
         });
 
         // Get the CSRF token from the cookie
-        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN'));
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        const xsrfToken = getCookie('XSRF-TOKEN');
 
         // Create the list
         const newList = await $fetch('http://localhost:8000/api/shopping-lists', {
@@ -125,19 +195,26 @@ async function handleSignOut() {
     }
 }
 
+// Handle list click
+function handleListClick(listId) {
+    selectedListId.value = listId
+    // Find the selected list directly from shoppingList
+    const list = shoppingLists.value.find(list => list.id === listId)
+    // set textare to the list's text (or empty if not found)
+    textareaValue.value = list?.text || ''
+}
 
-onMounted(async () => {
-    try {
-        const response = await $fetch('http://localhost:8000/api/shopping-lists', {
-            credentials: 'include'
-        })
-        shoppingLists.value = response
-        console.log(response)
-    } catch (error) {
-        console.error('Error fetching shopping lists:', error)
-        alert('Error loading shopping lists. Please try again.')
-    }
-})
+// helper function to get the CSRF token from the cookie
+async function getCsrfToken(){
+    // Ensure the CSRF cookie is set
+    await $fetch('http://localhost:8000/sanctum/csrf-cookie')
+
+    // Get the CSRF token from the cookie
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; CSRF-TOKEN=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
 
 
 </script>
