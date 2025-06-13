@@ -308,6 +308,7 @@ async function deleteList(id) {
 
     } catch (error) {
         console.error('Error deleting list:', error);
+        
         alert('Error creating new list. Please try again.');
     }
 }
