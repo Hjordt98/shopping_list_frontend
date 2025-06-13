@@ -3,8 +3,7 @@
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4">
-                <textarea
-                    class="
+                <textarea class="
                         textarea textarea-ghost    <!-- Base textarea styles -->
                         bg-base-200               <!-- Background color -->
                         border                    <!-- Border -->
@@ -20,8 +19,7 @@
                         focus:ring-primary        <!-- Focus ring color -->
                         mb-8                      <!-- Bottom margin -->
                         text-center
-                    "
-                    placeholder="Name of shopping list" v-model="selectedListName"></textarea>
+                    " placeholder="Name of shopping list" v-model="selectedListName"></textarea>
                 <textarea placeholder="Type here" class="
                         bg-base-200                <!-- Background color (from your theme) -->
                         border                     <!-- Adds a border -->
@@ -39,7 +37,9 @@
                         overflow-x: hidden;        /* Prevents horizontal scroll */
                         overflow-y: auto;          /* Allows vertical scroll if content overflows */
                     " v-model="textareaValue" "></textarea>
+                       <button @click="deleteList(selectedListId)" class="btn btn-ghost btn absolute bottom-0 right-0 mb-10 mr-10">delete</button>
             </div>
+         
         </div>
         <div class=" drawer-side">
             <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">Shopping List</h1>
@@ -52,11 +52,13 @@
             <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
 
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
+       
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id">
                     <a @click="handleListClick(list.id)"> {{ truncateListName(list.name) }} </a>
-                </li>
-            </ul>
+                    </li>
+                </ul>
+   
 
             <h1 class="text-1xl ml-3 mb-2">Older than 3 days</h1>
         
@@ -148,8 +150,8 @@ const debouncedSaveList = useDebounceFn(async () => {
         });
         // Update the local list with the new text so UI stays in sync
         const list = shoppingLists.value.find(list => list.id === selectedListId.value)
-        if (list) 
-        list.text = textareaValue.value
+        if (list)
+            list.text = textareaValue.value
         list.name = selectedListName
     } catch (error) {
         console.error('Error updating list:', error)
@@ -249,8 +251,43 @@ async function getCsrfToken() {
 
 // function to truncate the list name if it is too long
 function truncateListName(name) {
-    if (name.length < 20) return name
-    return name.slice(0, 20) + '...'
+    if (name.length < 30) return name
+    return name.slice(0, 30) + '...'
+}
+
+// function to delete list
+async function deleteList(id) {
+    try {
+        // Get CSRF cookie
+        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
+            credentials: 'include'
+        });
+
+        // Get the CSRF token from the cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        const xsrfToken = getCookie('XSRF-TOKEN');
+
+        // Delete the list
+        const newList = await $fetch(`http://localhost:8000/api/shopping-lists/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        });
+
+        alert('Shopping list deleted!');
+        window.location.reload();
+
+    } catch (error) {
+        console.error('Error deleting list:', error);
+        alert('Error creating new list. Please try again.');
+    }
 }
 
 </script>
