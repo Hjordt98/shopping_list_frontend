@@ -2,7 +2,11 @@
     <div class="drawer lg:drawer-open">
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
-            <!-- Page content here -->
+            <div class="flex flex-col items-center justify-center w-full mt-10 px-4">
+                <textarea placeholder="Type here"
+                    class="bg-base-200 border border-gray-400 rounded-lg p-4 text-lg w-full max-w-6xl h-[675px] resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                    style="box-sizing: border-box; overflow-x: hidden; overflow-y: auto;"></textarea>
+            </div>
         </div>
         <div class="drawer-side">
             <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">Shopping List</h1>
