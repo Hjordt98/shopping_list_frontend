@@ -16,13 +16,16 @@
 
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li><a>Sidebar Item 1</a></li>
-                <li><a>Sidebar Item 2</a></li>
+                <li v-for="list in todayAndYesterday" :key="list.id">
+                    <a> {{ list.name }} </a>
+                </li>
             </ul>
 
             <h1 class="text-1xl ml-3 mb-2">Older than 3 days</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li><a>Older Item 1</a></li>
+                <li v-for="list in olderList" :key="list.id">
+                    <a>{{ list.name }}</a>
+                </li>
             </ul>
 
             <h1 class="text-1xl ml-3 mb-2">Favorites</h1>
@@ -34,11 +37,40 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 
 const { logout } = useSanctumAuth()
+
+// ref to handle computed properties
 const shoppingLists = ref([])
+
+// computed properties for today and yesterday
+const todayAndYesterday = computed(() => {
+    const now = new Date();
+    // Get UTC timestamp for now
+    const nowUTC = now.getTime() - now.getTimezoneOffset() * 60000;
+    // 48 hours ago in UTC
+    const twoDaysAgoUTC = nowUTC - 48 * 60 * 60 * 1000;
+
+    return shoppingLists.value.filter(list => {
+        const listUpdatedDate = new Date(list.updated_at);
+        const listUTC = listUpdatedDate.getTime();
+        return listUTC >= twoDaysAgoUTC && listUTC <= nowUTC;
+    }).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+})
+
+const olderList = computed(() => {
+    const threeDaysAgo = new Date()
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+
+    return shoppingLists.value
+        .filter(list => {
+            const listUpdatedDate = new Date(list.updated_at)
+            return listUpdatedDate < threeDaysAgo
+        })
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+})
 
 
 // Helper function to get CSRF token from cookie
@@ -72,6 +104,7 @@ async function createNewList() {
         });
 
         alert('Shopping list created!');
+
     } catch (error) {
         console.error('Error creating new list:', error);
         alert('Error creating new list. Please try again.');
@@ -87,6 +120,7 @@ async function handleSignOut() {
         alert('Error signing out. Please try again.')
     }
 }
+
 
 onMounted(async () => {
     try {
