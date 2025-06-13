@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.8",
+    "@vueuse/core": "^13.3.0",
     "nuxt": "^3.17.5",
     "nuxt-auth-sanctum": "^0.6.7",
     "tailwindcss": "^4.1.8",
