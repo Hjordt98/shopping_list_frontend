@@ -3,6 +3,7 @@
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4">
+                <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">{{selectedList?.name || 'Shopping List'}}</h1>
                 <textarea placeholder="Type here" class="
                         bg-base-200                <!-- Background color (from your theme) -->
                         border                     <!-- Adds a border -->
@@ -68,6 +69,11 @@ const { logout } = useSanctumAuth()
 const shoppingLists = ref([])
 const textareaValue = ref('')
 const selectedListId = ref(null)
+
+const selectedList = computed(() =>{
+    return shoppingLists.value.find(list => list.id === selectedListId.value)
+})
+
 
 const todayAndYesterday = computed(() => {
     const now = new Date();
