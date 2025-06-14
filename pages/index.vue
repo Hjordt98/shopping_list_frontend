@@ -3,26 +3,14 @@
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col items-center justify-center">
             <!-- Sign Out button at top right -->
-            <button @click="handleSignOut" class="btn btn-ghost absolute top-0 right-0 mt-6 mr-10">Sign Out</button>
+            <button @click="handleSignOut"
+                class=" border-gray-300 border-2 btn btn-ghost absolute top-0 right-0 mt-6 mr-10">Sign Out</button>
+
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
-                <div v-if="showDeleteSuccess" role="alert"
-                    class="alert alert-success absolute left-1/2 -translate-x-1/2 -top-15 z-50 scale-125">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Shopping list deleted!</span>
-                </div>
-                <div v-if="showCreateSuccess" role="alert"
-                    class="alert alert-success absolute left-1/2 -translate-x-1/2 -top-15 z-50 scale-125">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Shopping list created!</span>
-                </div>
+
+                <Alert :show="showDeleteSuccess" message="Shopping List Deleted!" type="success" />
+                <Alert :show="showCreateSuccess" message="Shopping List Created!" type="success" />
+
                 <textarea class="
                         textarea textarea-ghost    <!-- Base textarea styles -->
                         bg-base-200               <!-- Background color -->
@@ -59,14 +47,15 @@
                     " v-model="textareaValue"></textarea>
 
                 <button @click="deleteList(selectedListId)"
-                    class="btn btn-ghost absolute bottom-0 right-0 mb-10 mr-10">Delete</button>
+                    class="btn btn-ghost absolute top-0 right-0 mt-6 mr-10 border-gray-300 border-2">Delete</button>
             </div>
 
         </div>
         <div class=" drawer-side">
             <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">Shopping List</h1>
             <div class="w-full">
-                <button class="btn mb-4 mx-auto block border-2 border-gray-300 rounded-md" @click="createNewList">Create
+                <button class="btn btn-ghost mb-4 mx-auto block border-gray-300 rounded-md"
+                    @click="createNewList">Create
                     new list</button>
             </div>
 
@@ -75,8 +64,14 @@
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
 
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in todayAndYesterday" :key="list.id">
-                    <a @click="handleListClick(list.id)"> {{ truncateListName(list.name) }} </a>
+                <li v-for="list in todayAndYesterday" :key="list.id" class="mb-2">
+                    <a
+                        @click="handleListClick(list.id)"
+                        class="border-2 border-transparent block px-3 py-1"
+                        :class="{ 'border-white rounded-md': selectedListId === list.id }"
+                    >
+                        {{ truncateListName(list.name) }}
+                    </a>
                 </li>
             </ul>
 
@@ -85,7 +80,10 @@
 
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in olderList" :key="list.id">
-                    <a @click="handleListClick(list.id)">{{ truncateListName(list.name) }}</a>
+                    <a @click="handleListClick(list.id)"
+                        :class="{ 'border-2 border-gray-300 rounded-md': selectedListId === list.id }">
+                        {{ truncateListName(list.name) }}
+                    </a>
                 </li>
             </ul>
 
@@ -99,7 +97,7 @@
 </template>
 
 <script setup>
-
+import Alert from '~/components/alerts/Alert.vue'
 // imports
 import { ref, onMounted, computed, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
@@ -171,10 +169,14 @@ const debouncedSaveList = useDebounceFn(async () => {
             credentials: 'include'
         });
         // Update the local list with the new text so UI stays in sync
-        const list = shoppingLists.value.find(list => list.id === selectedListId.value)
-        if (list)
-            list.text = textareaValue.value
-        list.name = selectedListName.value
+        const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+        if (listIndex !== -1) {
+            shoppingLists.value[listIndex].text = textareaValue.value
+            shoppingLists.value[listIndex].name = selectedListName.value
+            // Move the updated list to the top
+            const [updatedList] = shoppingLists.value.splice(listIndex, 1)
+            shoppingLists.value.unshift(updatedList)
+        }
     } catch (error) {
         console.error('Error updating list:', error)
     }
@@ -306,6 +308,7 @@ async function deleteList(id) {
         });
         shoppingLists.value = shoppingLists.value.filter(list => list.id !== id)
         showDeleteSuccess.value = true
+        selectedListId.value = shoppingLists.value[0].id
         setTimeout(() => showDeleteSuccess.value = false, 3000) // Hide after 3 seconds
 
     } catch (error) {
