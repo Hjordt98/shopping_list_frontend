@@ -11,40 +11,47 @@
                 <Alert :show="showDeleteSuccess" message="Shopping List Deleted!" type="success" />
                 <Alert :show="showCreateSuccess" message="Shopping List Created!" type="success" />
 
-                <textarea class="
-                        textarea textarea-ghost    <!-- Base textarea styles -->
-                        bg-base-200               <!-- Background color -->
-                        border                    <!-- Border -->
-                        border-gray-400           <!-- Border color -->
-                        rounded-lg                <!-- Rounded corners -->
-                        p-4                       <!-- Padding -->
-                        text-lg                   <!-- Text size -->
-                        resize-none               <!-- Prevent resizing -->
-                        focus:outline-none        <!-- Remove focus outline -->
-                        focus:ring-2              <!-- Focus ring width -->
-                        max-w-6xl
-                        w-full
-                        focus:ring-primary        <!-- Focus ring color -->
-                        mb-8                      <!-- Bottom margin -->
-                        text-center
-                    " placeholder="Name of shopping list" v-model="selectedListName"></textarea>
-                <textarea placeholder="Type here" class="
-                        bg-base-200                <!-- Background color (from your theme) -->
-                        border                     <!-- Adds a border -->
-                        border-gray-400            <!-- Border color -->
-                        rounded-lg                 <!-- Large rounded corners -->
-                        p-4                        <!-- Padding on all sides -->
-                        text-lg                    <!-- Large text size -->
-                        w-full                     <!-- Full width of parent -->
-                        max-w-6xl                  <!-- Maximum width (very wide, but responsive) -->
-                        h-[675px]                  <!-- Fixed height: 675px -->
-                        resize-none                <!-- Prevents user from resizing the textarea -->
-                        focus:outline-none         <!-- Removes default focus outline -->
-                    " style="
-                        box-sizing: border-box;    /* Ensures padding/border are included in width/height */
-                        overflow-x: hidden;        /* Prevents horizontal scroll */
-                        overflow-y: auto;          /* Allows vertical scroll if content overflows */
-                    " v-model="textareaValue"></textarea>
+                <!-- Instead of the textarea for items, show the items in a list -->
+                <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
+                    <!-- Header row -->
+                    <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
+                        <div class="w-12 flex justify-start">Marked</div>
+                        <div class="flex-1 pl-4">Item name</div>
+                        <div class="w-24 text-left pl-4">Quantity</div>
+                        <div class="w-32"></div>
+                    </div>
+                    <!-- Items -->
+                    <div v-if="selectedListItems.length">
+                        <div v-for="item in selectedListItems" :key="item.id"
+                            class="flex items-center border-b border-gray-700 last:border-b-0 py-2">
+                            <div class="w-12 flex justify-start">
+                                <input @click="toggleItem(item.id)" type="checkbox" class="checkbox"
+                                    :checked="item.is_checked" />
+                            </div>
+                            <div class="flex-1 pl-1">
+                                <!-- View mode -->
+                                <span v-if="editingItemId !== item.id" @click="startEditing(item.id, item.name)"
+                                    class="cursor-pointer hover:text-gray-300">
+                                    {{ item.name }}
+                                </span>
+
+                                <!-- Editing mode -->
+                                <input v-else type="text" v-model="editingName" @blur="saveItemName(item.id)"
+                                    @keyup.enter="saveItemName(item.id)" @keyup.esc="cancelEditing"
+                                    class="input input-ghost w-full" :placeholder="item.name" ref="nameInput" />
+                            </div>
+
+                            <div class="w-24 text-left pl-4">x{{ item.quantity }}</div>
+                            <div class="w-32 flex justify-start">
+                                <button @click="deleteItem(item.id)"
+                                    class="btn btn-ghost btn-sm border border-gray-300 ml-2">
+                                    Delete item
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="text-gray-400 mt-4 text-center">No items in this list.</div>
+                </div>
 
                 <button @click="deleteList(selectedListId)"
                     class="btn btn-ghost absolute top-0 right-0 mt-6 mr-10 border-gray-300 border-2">Delete</button>
@@ -65,11 +72,8 @@
 
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id" class="mb-2">
-                    <a
-                        @click="handleListClick(list.id)"
-                        class="border-2 border-transparent block px-3 py-1"
-                        :class="{ 'border-white rounded-md': selectedListId === list.id }"
-                    >
+                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                        :class="{ 'border-white rounded-md': selectedListId === list.id }">
                         {{ truncateListName(list.name) }}
                     </a>
                 </li>
@@ -110,8 +114,12 @@ const shoppingLists = ref([])
 const textareaValue = ref('')
 const selectedListId = ref(null)
 const selectedListName = ref('')
+const selectedListItems = ref([])
 const showDeleteSuccess = ref(false)
 const showCreateSuccess = ref(false)
+const editingItemId = ref(null)
+const editingName = ref('')
+const nameInput = ref(null)
 
 
 const todayAndYesterday = computed(() => {
@@ -197,7 +205,6 @@ onMounted(async () => {
             credentials: 'include'
         })
         shoppingLists.value = response
-        console.log(response)
     } catch (error) {
         console.error('Error fetching shopping lists:', error)
         alert('Error loading shopping lists. Please try again.')
@@ -256,11 +263,9 @@ async function handleSignOut() {
 // Handle list click
 function handleListClick(listId) {
     selectedListId.value = listId
-    // Find the selected list directly from shoppingList
     const list = shoppingLists.value.find(list => list.id === listId)
-    // set textare to the list's text (or empty if not found)
-    textareaValue.value = list?.text || ''
     selectedListName.value = list?.name || 'New Shopping List'
+    selectedListItems.value = list?.items || []
 }
 
 // helper function to get the CSRF token from the cookie
@@ -317,6 +322,107 @@ async function deleteList(id) {
 
         alert('Error creating new list. Please try again.');
     }
+}
+
+// function to delete item from list
+async function deleteItem(itemId) {
+    try {
+        // Get CSRF cookie
+        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
+            credentials: 'include'
+        });
+
+        // Get the CSRF token from the cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        const xsrfToken = getCookie('XSRF-TOKEN');
+
+        // Delete the item
+        await $fetch(`http://localhost:8000/api/shopping-list-items/${itemId}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        })
+        // Update the local list with the new items
+        selectedListItems.value = selectedListItems.value.filter(item => item.id !== itemId)
+    } catch (error) {
+        console.error('Error deleting item:', error);
+        alert('Error deleting item. Please try again.');
+    }
+}
+
+// function to toggle item
+async function updateItem(itemId, updates) {
+    try {
+        // Get CSRF cookie
+        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
+            credentials: 'include'
+        });
+
+        // Get the CSRF token from the cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        const xsrfToken = getCookie('XSRF-TOKEN');
+
+        // Update the item
+        await $fetch(`http://localhost:8000/api/shopping-list-items/${itemId}`, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            body: updates,
+            credentials: 'include'
+        });
+
+        // Update local state
+        const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
+        if (itemIndex !== -1) {
+            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], ...updates };
+        }
+    } catch (error) {
+        console.error('Error updating item:', error);
+        alert('Error updating item. Please try again.');
+    }
+}
+
+function startEditing(itemId, currentName) {
+    editingItemId.value = itemId;
+    editingName.value = currentName;
+    nextTick(() => {
+        nameInput.value?.focus();
+    });
+}
+
+function cancelEditing() {
+    editingItemId.value = null;
+    editingName.value = '';
+}
+
+function toggleItem(itemId) {
+    const item = selectedListItems.value.find(item => item.id === itemId);
+    if (item) {
+        updateItem(itemId, {is_checked: !item.is_checked });
+    }
+}
+
+async function saveItemName(itemId) {
+    if (!editingName.value.trim()) {
+        cancelEditing();
+        return;
+    }
+    await updateItem(itemId, {name: editingName.value.trim() });
+    cancelEditing();
 }
 
 </script>
