@@ -4,16 +4,23 @@
         <div class="drawer-content flex flex-col items-center justify-center">
 
             <!-- ---------------------------------------------------- Buttons ---------------------------------------------------- -->
-            <div class="flex gap-x-4 absolute top-0 right-0 mt-6 mr-10 w-full justify-end">
-                <button @click="deleteList(selectedListId)" class="btn btn-ghost border-gray-300 border-2">Delete
-                    selected list</button>
-                <button @click="handleSignOut" class="btn btn-ghost border-gray-300 border-2">
-                    Sign Out
-                </button>
-                <button @click="showCreateItemPopup = true" class="btn btn-ghost border-gray-300 border-2">
-                    Create New Item in selected list
-                </button>
+            <div class="flex gap-x-4 mt-6 mr-10 space-x-">
+                <div class="flex gap-x-4 justify-start">
+                    <button @click="showCreateItemPopup = true" class="btn btn-ghost border-gray-300 border-2">
+                        Create New Item in selected list
+                    </button>
 
+                    <button @click="deleteList(selectedListId)" class="btn btn-ghost border-gray-300 border-2">Delete
+                        selected list</button>
+                    <button @click="toggleFavorit(selectedListId)" class="btn btn-ghost border-gray-300 border-2">
+                        Add list to favorites
+                    </button>
+                </div>
+                <div>
+                    <button @click="handleSignOut" class="btn btn-ghost border-gray-300 border-2">
+                        Sign Out
+                    </button>
+                </div>
                 <!-- ---------------------------------------------------- Alerts ---------------------------------------------------- -->
                 <Alert class="mt-20 align-center" :show="showDeleteSuccess" message="Shopping List Deleted!"
                     type="success" />
@@ -620,7 +627,7 @@ function addItem() {
     }
     shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
     createNewItem()
-    
+
 }
 
 

@@ -26,9 +26,11 @@
               required
             />
           </div>
-          <div class="form-control mt-6">
+          <div class="form-control mt-6 space-x-4">
             <button type="submit" class="btn btn-primary">Login</button>
+            <button type="button" class="btn btn-ghost border-gray-300 border-2" @click="navigateTo('/auth/register')">Register</button>
           </div>
+          
         </form>
       </div>
     </div>
