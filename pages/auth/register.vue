@@ -96,6 +96,7 @@ const handleRegister = async () => {
     })
 
     alert('Registration successful! You can now log in.')
+    navigateTo('/auth/login')
   } catch (error) {
     console.error('Registration failed:', error)
     alert('Registration failed. See console for details.')

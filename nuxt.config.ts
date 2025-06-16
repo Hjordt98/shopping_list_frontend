@@ -12,7 +12,7 @@ export default defineNuxtConfig({
     ],
   },
 
-  modules: ["nuxt-auth-sanctum"],
+  modules: ["nuxt-auth-sanctum", "usemods-nuxt"],
 
   sanctum: {
     baseUrl: 'http://localhost:8000', // Laravel API
