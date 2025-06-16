@@ -63,7 +63,7 @@
                                     {{ item.name }}
                                 </p>
                                 <p v-else>
-                                    {{ item.name.slice(0,70) + '...' }}
+                                    {{ item.name.slice(0, 70) + '...' }}
                                 </p>
                             </div>
                             <div class="w-24 text-left pl-4">x{{ item.quantity }}</div>
@@ -101,7 +101,7 @@
                             {{ list.name }}
                         </p>
                         <p v-else>
-                            {{ list.name.slice(0,30) + '...' }}
+                            {{ list.name.slice(0, 30) + '...' }}
                         </p>
                     </a>
                 </li>
@@ -116,7 +116,7 @@
                             {{ list.name }}
                         </p>
                         <p v-else>
-                            {{ list.name.slice(0,30) + '...' }}
+                            {{ list.name.slice(0, 30) + '...' }}
                         </p>
                     </a>
                 </li>
@@ -133,7 +133,7 @@
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
             <div class="mb-4">
                 <h2 v-if="selectedListName.length < 30">Creating item for: {{ selectedListName }}</h2>
-                <h2 v-else>Creating item for: {{ selectedListName.slice(0,30) + '...' }}</h2>
+                <h2 v-else>Creating item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
             <div class="mb-4">
                 <input v-model="newItemName" placeholder="Item name" class="input input-boredered w-full" />
@@ -162,7 +162,7 @@
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
             <div class="mb-4">
                 <h2 v-if="selectedListName.length < 30">Editing item in {{ selectedListName }}</h2>
-                <h2 v-else>Editing item for: {{ selectedListName.slice(0,30) + '...' }}</h2>
+                <h2 v-else>Editing item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
             <div class="mb-4">
                 <input v-model="editingItem.name" placeholder="Item name" class="input input-boredered w-full" />
@@ -549,7 +549,7 @@ async function createNewItem() {
         if (listIndex !== -1) {
             shoppingLists.value[listIndex].items.push(newItem)
         }
-        
+
         //clear the form
         newItemName.value = ''
         showAddItemSuccess.value = true
@@ -611,17 +611,16 @@ async function updateListName(listId) {
 
 // Add item
 function addItem() {
-    if (!isInteger(newItemQuantity.value)) {
-        newItemQuantityError.value = 'Quantity must be a whole number'
+    if (!validateQuantity(newItemQuantity.value, newItemQuantityError))
         return
-    }
+
     if (isEmpty(newItemName.value)) {
         newItemNameError.value = 'Item name is required and must not be empty'
         return
     }
-    //order latest first
     shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
     createNewItem()
+    
 }
 
 
@@ -631,6 +630,18 @@ function openEditItemPopup(item) {
     showEditItemPopup.value = true
 }
 
+// validate quantity
+function validateQuantity(quantity, errorRef) {
+    if (!isInteger(quantity)) {
+        errorRef.value = 'Quantity must be a whole number'
+        return false
+    }
+    if (quantity <= 0) {
+        errorRef.value = 'Quantity must be greater than 0'
+        return false
+    }
+    return true
+}
 
 // Get CSRF token
 async function getCsrfToken() {
