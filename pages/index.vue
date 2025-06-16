@@ -29,8 +29,8 @@
                     <!-- Header row -->
                     <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
                         <div class="w-12 flex justify-start">Marked</div>
-                        <div class="flex-1 pl-4">Item name</div>
-                        <div class="w-24 text-left pl-4">Quantity</div>
+                        <div class="flex-1 pl-8">Item name</div>
+                        <div class="w-24 text-left pr-45">Quantity</div>
                         <div class="w-32"></div>
                     </div>
                     <!-- Items -->
@@ -41,23 +41,17 @@
                                 <input @click="toggleItem(item.id)" type="checkbox" class="checkbox"
                                     :checked="item.is_checked" />
                             </div>
-                            <div class="flex-1 pl-1">
-                                <!-- View mode -->
-                                <span v-if="editingItemId !== item.id" @click="startEditing(item.id, item.name)"
-                                    class="cursor-pointer hover:text-gray-300">
-                                    {{ item.name }}
-                                </span>
-
-                                <!-- Editing mode -->
-                                <input v-else type="text" v-model="editingName" @blur="saveItemName(item.id)"
-                                    @keyup.enter="saveItemName(item.id)" @keyup.esc="cancelEditing"
-                                    class="input input-ghost w-full" :placeholder="item.name" ref="nameInput" />
+                            <div class="flex-1 pl-8 pr-30">
+                                {{ item.name }}
                             </div>
-
                             <div class="w-24 text-left pl-4">x{{ item.quantity }}</div>
                             <div class="w-32 flex justify-start">
-                                <button @click="deleteItem(item.id)" class="btn btn-ghost border-gray-300 border-2">Delete Item</button>
+                                <button @click="deleteItem(item.id)"
+                                    class="btn btn-ghost border-gray-300 border-2">Delete Item</button>
                             </div>
+                            <button @click="openEditItemPopup(item)" class="btn btn-ghost border-gray-300 border-2">
+                                Edit Item
+                            </button>
                         </div>
                     </div>
                     <div v-else-if="selectedListId !== null && selectedListItems.length === 0"
@@ -133,6 +127,30 @@
         </div>
         <div class="fixed inset-0 bg-black opacity-50 z-[9998]" @click="showCreateItemPopup = false"></div>
     </div>
+    <div v-if="showEditItemPopup" class="fixed inset-0 flex items-center justify-center">
+        <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
+            <div class="mb-4">
+                <h2 v-if="selectedListName.length < 30">Editing item in {{ selectedListName }}</h2>
+                <h2 v-else>Editing item for: {{ truncateListName(editingItem.name) }}</h2>
+            </div>
+            <div class="mb-4">
+                <input v-model="editingItem.name" placeholder="Item name" class="input input-boredered w-full" />
+            </div>
+            <div class="mb-4">
+                <input v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
+                    min="1" max="100" class="input input-bordered w-full" />
+                <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
+                    {{ editingItemQuantityError }}
+                </div>
+            </div>
+            <div class="flex gap-x-4">
+                <button @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity)" class="btn btn-ghost border-gray-300 border-2">Update item</button>
+                <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
+                    editing item</button>
+            </div>
+        </div>
+        <div class="fixed inset-0 bg-black opacity-50 z-[9998]" @click="showCreateItemPopup = false"></div>
+    </div>
 </template>
 
 <script setup>
@@ -160,7 +178,9 @@ const nameInput = ref(null)
 const newItemName = ref('')
 const newItemQuantity = ref(1)
 const newItemQuantityError = ref('')
-
+const showEditItemPopup = ref(false)
+const editingItem = ref()
+const editingItemQuantityError = ref('')
 
 const todayAndYesterday = computed(() => {
     const now = new Date();
@@ -306,6 +326,7 @@ function handleListClick(listId) {
     const list = shoppingLists.value.find(list => list.id === listId)
     selectedListName.value = list?.name || 'New Shopping List'
     selectedListItems.value = list?.items || []
+    console.log(selectedListItems.value)
 }
 
 // helper function to get the CSRF token from the cookie
@@ -398,7 +419,7 @@ async function deleteItem(itemId) {
 }
 
 // function to toggle item
-async function updateItem(itemId, updates) {
+async function updateItem(itemId, name, quantity, is_checked) {
     try {
         // Get CSRF cookie
         await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
@@ -421,14 +442,18 @@ async function updateItem(itemId, updates) {
                 'Content-Type': 'application/json',
                 'X-XSRF-TOKEN': xsrfToken
             },
-            body: updates,
+            body: {
+                name: name,
+                quantity: quantity,
+                is_checked: is_checked
+            },
             credentials: 'include'
         });
 
         // Update local state
         const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
         if (itemIndex !== -1) {
-            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], ...updates };
+            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], name: name, quantity: quantity };
         }
     } catch (error) {
         console.error('Error updating item:', error);
@@ -436,13 +461,6 @@ async function updateItem(itemId, updates) {
     }
 }
 
-function startEditing(itemId, currentName) {
-    editingItemId.value = itemId;
-    editingName.value = currentName;
-    nextTick(() => {
-        nameInput.value?.focus();
-    });
-}
 
 function cancelEditing() {
     editingItemId.value = null;
@@ -452,18 +470,10 @@ function cancelEditing() {
 function toggleItem(itemId) {
     const item = selectedListItems.value.find(item => item.id === itemId);
     if (item) {
-        updateItem(itemId, { is_checked: !item.is_checked });
+        updateItem(itemId, item.name, item.quantity, !item.is_checked);
     }
 }
 
-async function saveItemName(itemId) {
-    if (!editingName.value.trim()) {
-        cancelEditing();
-        return;
-    }
-    await updateItem(itemId, { name: editingName.value.trim() });
-    cancelEditing();
-}
 
 async function updateListName(listId) {
     try {
@@ -524,7 +534,6 @@ function addItem() {
 
 async function createNewItem() {
     try {
-        console.log('creating new item')
         // Get CSRF cookie
         await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
             credentials: 'include'
@@ -562,6 +571,12 @@ async function createNewItem() {
     } catch (error) {
         console.log(error)
     }
+}
+
+
+function openEditItemPopup(item) {
+    editingItem.value = item
+    showEditItemPopup.value = true
 }
 
 </script>
