@@ -45,7 +45,7 @@
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
                     <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name and
                         type
-                        in the new name.</p>
+                        in the new name. It will be saved automatically.</p>
                     <input type="text" v-model="selectedListName" @blur="updateListName(selectedListId)"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
 
@@ -180,17 +180,21 @@
 
     <!-- ---------------------------------------------------- Edit item popup ---------------------------------------------------- -->
     <div v-if="showEditItemPopup" class="fixed inset-0 flex items-center justify-center">
-        <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
+        <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[300px] min-w-[600px]">
             <div class="mb-4">
                 <h2 v-if="selectedListName.length < 30">Editing item in {{ selectedListName }}</h2>
                 <h2 v-else>Editing item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
             <div class="mb-4">
-                <input v-model="editingItem.name" placeholder="Item name" class="input input-boredered w-full" />
+                <input @keydown.escape="showEditItemPopup = false"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity)"
+                    v-model="editingItem.name" placeholder="Item name" class="input input-boredered w-full" />
             </div>
             <div class="mb-4">
-                <input v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number"
-                    step="1" min="1" max="100" class="input input-bordered w-full" />
+                <input @keydown.escape="showEditItemPopup = false"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity)"
+                    v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
+                    min="1" max="100" class="input input-bordered w-full" />
                 <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
                     {{ editingItemQuantityError }}
                 </div>
