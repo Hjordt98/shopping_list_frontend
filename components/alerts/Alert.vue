@@ -1,6 +1,6 @@
 <template>
     <div v-if="show" role="alert" :class="[
-        'alert absolute left-1/2 -translate-x-1/2 -top-15 z-50 scale-125',
+        'alert absolute left-1/2 -translate-x-1/2 -top-15 z-50 scale-125 border-2 border-gray-300',
         `alert-${type}`
     ]">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">

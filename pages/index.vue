@@ -30,8 +30,7 @@
             <Alert class="mt-20 ml-100" :show="showCreateItemSuccess" message="Item Updated!" type="success" />
             <Alert class="mt-20 ml-100" :show="showDeleteItemSuccess" message="Item Deleted!" type="success" />
             <Alert class="mt-20 ml-100" :show="showAddItemSuccess" message="Item added to list!" type="success" />
-            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."
-                type="error" />
+            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again." type="error" />
             <Alert class="mt-20 ml-100" :show="showFavoriteSuccess" message="List added to favorites!" type="success" />
             <!-- ---------------------------------------------------- No list selected ---------------------------------------------------- -->
             <div v-if="selectedListId === null">
@@ -343,6 +342,9 @@ onMounted(async () => {
         const response = await $fetch('http://localhost:8000/api/shopping-lists', {
             credentials: 'include'
         })
+        if (response.length === 0) {
+            createNewList()
+        }
         shoppingLists.value = response
         shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
         handleListClick(shoppingLists.value[0].id)
@@ -410,7 +412,7 @@ async function deleteList(id) {
         const xsrfToken = getCookie('XSRF-TOKEN');
 
         // Delete the list
-        const newList = await $fetch(`http://localhost:8000/api/shopping-lists/${id}`, {
+        await $fetch(`http://localhost:8000/api/shopping-lists/${id}`, {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
@@ -418,6 +420,7 @@ async function deleteList(id) {
             },
             credentials: 'include'
         });
+
         shoppingLists.value = shoppingLists.value.filter(list => list.id !== id)
         showDeleteSuccess.value = true
         selectedListId.value = null
