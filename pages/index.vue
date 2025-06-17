@@ -33,7 +33,8 @@
             <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."
                 type="error" />
             <Alert class="mt-20 ml-100" :show="showFavoriteSuccess" message="List added to favorites!" type="success" />
-            <Alert class="mt-20 ml-100" :show="showLastListDeleted" message="Last list deleted. New list was created automatically." type="success" />
+            <Alert class="mt-20 ml-100" :show="showLastListDeleted"
+                message="Last list deleted. New list was created automatically." type="success" />
             <!-- ---------------------------------------------------- No list selected ---------------------------------------------------- -->
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
@@ -49,10 +50,11 @@
 
                     <!-- ---------------------------------------------------- Header row for items ----------------------------------------------- -->
                     <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
-                        <div class="w-12 flex justify-start">Marked</div>
+                        <div class="w-12">Marked</div>
                         <div class="flex-1 pl-8">Item name</div>
-                        <div class="w-24 text-left pr-45">Quantity</div>
-                        <div class="w-32"></div>
+                        <div class="pr-9">Category</div>
+                        <div class="pr-5">Quantity</div>
+                        <div class="pr-42">Actions</div>
                     </div>
 
                     <!-- ---------------------------------------------------- Items in list ---------------------------------------------------- -->
@@ -70,6 +72,9 @@
                                 <p v-else>
                                     {{ item.name.slice(0, 70) + '...' }}
                                 </p>
+                            </div>
+                            <div class="w-24 text-left pl-4 pr-22">
+                                {{ item.category }}
                             </div>
                             <div class="w-24 text-left pl-4">x{{ item.quantity }}</div>
                             <div class="w-32 flex justify-start">
@@ -160,6 +165,17 @@
                 </div>
             </div>
             <div class="mb-4">
+                <select v-model="newItemCategory" class="select w-full mb-4" placeholder="Pick a category">
+                    <option disabled selected>Pick a category</option>
+                    <option v-for="category in categories" :key="category">
+                        {{ category }}
+                    </option>
+                </select>
+                <div v-if="newItemCategoryError" class="text-red-500 text-sm mt-1">
+                    {{ newItemCategoryError }}
+                </div>
+            </div>
+            <div class="mb-4">
                 <input v-model="newItemQuantity" type="number" placeholder="Quantity, must be a whole number" step="1"
                     min="1" max="100" class="input input-bordered w-full" />
                 <div v-if="newItemQuantityError" class="text-red-500 text-sm mt-1">
@@ -189,6 +205,17 @@
                     v-model="editingItem.name" placeholder="Item name" class="input input-boredered w-full" />
             </div>
             <div class="mb-4">
+                <select v-model="editingItemCategory" class="select w-full mb-4" :default="editingItem.category">
+                    <option disabled selected>Pick a category</option>
+                    <option v-for="category in categories" :key="category">
+                        {{ category }}
+                    </option>
+                </select>
+                <div v-if="editingItemCategoryError" class="text-red-500 text-sm mt-1">
+                    {{ editingItemCategoryError }}
+                </div>
+            </div>
+            <div class="mb-4">
                 <input @keydown.escape="showEditItemPopup = false"
                     @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity)"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
@@ -215,9 +242,7 @@
 import Alert from '~/components/alerts/Alert.vue'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import { isInteger } from 'usemods'
-import { isEmpty } from 'usemods'
-
+import { isInteger, isEmpty } from 'usemods'
 // ---------------------------------------------------- useSanctumAuth hook to handle authentication ----------------------------------------------------
 const { logout } = useSanctumAuth()
 
@@ -231,12 +256,30 @@ const selectedListItems = ref([])
 const showCreateItemPopup = ref(false)
 const editingItemId = ref(null)
 const editingName = ref('')
+const editingItemCategoryError = ref('')
 const newItemName = ref('')
 const newItemQuantity = ref(1)
 const newItemQuantityError = ref('')
+const newItemCategoryError = ref('')
 const showEditItemPopup = ref(false)
 const editingItem = ref()
 const isFavorite = ref(null)
+const newItemCategory = ref('')
+const editingItemCategory = ref('')
+const categories = [
+    'Fruits',
+    'Vegetables',
+    'Meat',
+    'Dairy',
+    'Bakery',
+    'Drinks',
+    'Cleaning',
+    'Household',
+    'Personal Care',
+    'Baby',
+    'Pet',
+    'Other'
+]
 
 // Alerts
 const showDeleteSuccess = ref(false)
@@ -284,6 +327,7 @@ const favoriteList = computed(() => {
     return shoppingLists.value.filter(list => list.is_favorite).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 })
 
+
 // ---------------------------------------------------- misc ----------------------------------------------------
 const debouncedSaveList = useDebounceFn(async () => {
     if (!selectedListId.value) return;
@@ -326,6 +370,8 @@ const debouncedSaveList = useDebounceFn(async () => {
         console.error('Error updating list:', error)
     }
 }, 1000)
+
+
 
 // ---------------------------------------------------- watch ----------------------------------------------------
 watch(textareaValue, () => {
@@ -439,9 +485,9 @@ async function deleteList(id) {
             setTimeout(() => showDeleteSuccess.value = false, 3000)
         }
     } catch (error) {
-    generalError.value = true
-    setTimeout(() => generalError.value = false, 3000)
-}
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
 }
 
 // function to delete item from list
@@ -506,7 +552,8 @@ async function updateItem(itemId, name, quantity, is_checked) {
             body: {
                 name: name,
                 quantity: quantity,
-                is_checked: is_checked
+                is_checked: is_checked,
+                category: editingItemCategory.value
             },
             credentials: 'include'
         });
@@ -514,7 +561,7 @@ async function updateItem(itemId, name, quantity, is_checked) {
         // Update local state
         const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
         if (itemIndex !== -1) {
-            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], name: name, quantity: quantity };
+            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], name: name, quantity: quantity, category: editingItemCategory.value };
         }
         showCreateItemSuccess.value = true
         showEditItemPopup.value = false
@@ -588,7 +635,8 @@ async function createNewItem() {
             body: {
                 name: newItemName.value,
                 quantity: newItemQuantity.value,
-                shopping_list_id: selectedListId.value
+                shopping_list_id: selectedListId.value,
+                category: newItemCategory.value
             },
             credentials: 'include'
         })
@@ -712,11 +760,18 @@ async function updateListFavorite(listId) {
 
 // Add item
 function addItem() {
-    if (!validateQuantity(newItemQuantity.value, newItemQuantityError))
+    if (!isInteger(newItemQuantity.value)) {
+        newItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
         return
+    }
+
+    if (isEmpty(newItemCategory.value)) {
+        newItemCategoryError.value = 'Category is required. Please pick a category.'
+        return
+    }
 
     if (isEmpty(newItemName.value)) {
-        newItemNameError.value = 'Item name is required and must not be empty'
+        newItemNameError.value = 'Item name is required. Please enter a name for the item.'
         return
     }
     shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
@@ -729,20 +784,9 @@ function addItem() {
 function openEditItemPopup(item) {
     editingItem.value = item
     showEditItemPopup.value = true
+    editingItemCategory.value = item.category
 }
 
-// validate quantity
-function validateQuantity(quantity, errorRef) {
-    if (!isInteger(quantity)) {
-        errorRef.value = 'Quantity must be a whole number'
-        return false
-    }
-    if (quantity <= 0) {
-        errorRef.value = 'Quantity must be greater than 0'
-        return false
-    }
-    return true
-}
 
 // Get CSRF token
 async function getCsrfToken() {
