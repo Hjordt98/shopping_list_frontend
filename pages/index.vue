@@ -30,12 +30,11 @@
             <Alert class="mt-20 ml-100" :show="showCreateItemSuccess" message="Item Updated!" type="success" />
             <Alert class="mt-20 ml-100" :show="showDeleteItemSuccess" message="Item Deleted!" type="success" />
             <Alert class="mt-20 ml-100" :show="showAddItemSuccess" message="Item added to list!" type="success" />
-            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again." type="error" />
+            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."
+                type="error" />
             <Alert class="mt-20 ml-100" :show="showFavoriteSuccess" message="List added to favorites!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showLastListDeleted" message="Last list deleted. New list was created automatically." type="success" />
             <!-- ---------------------------------------------------- No list selected ---------------------------------------------------- -->
-            <div v-if="selectedListId === null">
-                <h1>please select a list before creating an item</h1>
-            </div>
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
@@ -249,6 +248,7 @@ const showDeleteItemSuccess = ref(false)
 const showAddItemSuccess = ref(false)
 const generalError = ref(false)
 const showFavoriteSuccess = ref(false)
+const showLastListDeleted = ref(false)
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
 const todayAndYesterday = computed(() => {
@@ -420,18 +420,28 @@ async function deleteList(id) {
             },
             credentials: 'include'
         });
-
         shoppingLists.value = shoppingLists.value.filter(list => list.id !== id)
-        showDeleteSuccess.value = true
         selectedListId.value = null
-        setTimeout(() => showDeleteSuccess.value = false, 3000) // Hide after 3 seconds
         shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-        handleListClick(shoppingLists.value[0].id)
 
+        if (
+            shoppingLists.value.length === 0 &&
+            olderList.value.length === 0 &&
+            favoriteList.value.length === 0
+        ) {
+            await createNewList()
+            handleListClick(shoppingLists.value[0].id)
+            showLastListDeleted.value = true
+            setTimeout(() => showLastListDeleted.value = false, 3000)
+        } else if (shoppingLists.value.length > 0) {
+            handleListClick(shoppingLists.value[0].id)
+            showDeleteSuccess.value = true
+            setTimeout(() => showDeleteSuccess.value = false, 3000)
+        }
     } catch (error) {
-        generalError.value = true
-        setTimeout(() => generalError.value = false, 3000)
-    }
+    generalError.value = true
+    setTimeout(() => generalError.value = false, 3000)
+}
 }
 
 // function to delete item from list
