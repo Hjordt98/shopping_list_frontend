@@ -1,19 +1,20 @@
 <template>
     <div class="drawer lg:drawer-open">
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
-        <div class="drawer-content flex flex-col items-center justify-center">
+        <div class="drawer-content flex flex-col min-h-screen bg-base-200">
 
             <!-- ---------------------------------------------------- Buttons ---------------------------------------------------- -->
-            <div class="flex gap-x-4 mt-6 mr-10 space-x-">
-                <div class="flex gap-x-4 justify-start">
+            <div class="flex justify-between items-center p-6">
+                <div class="flex gap-x-4">
                     <button @click="showCreateItemPopup = true" class="btn btn-ghost border-gray-300 border-2">
                         Create New Item in selected list
                     </button>
 
-                    <button @click="deleteList(selectedListId)" class="btn btn-ghost border-gray-300 border-2">Delete
-                        selected list</button>
-                    <button @click="toggleFavorit(selectedListId)" class="btn btn-ghost border-gray-300 border-2">
-                        Add list to favorites
+                    <button @click="deleteList(selectedListId)" class="btn btn-ghost border-gray-300 border-2">
+                        Delete selected list
+                    </button>
+                    <button @click="toggleFavorite(selectedListId)" class="btn btn-ghost border-gray-300 border-2">
+                        {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
                 </div>
                 <div>
@@ -21,20 +22,16 @@
                         Sign Out
                     </button>
                 </div>
-                <!-- ---------------------------------------------------- Alerts ---------------------------------------------------- -->
-                <Alert class="mt-20 align-center" :show="showDeleteSuccess" message="Shopping List Deleted!"
-                    type="success" />
-                <Alert class="mt-20 align-center" :show="showCreateSuccess" message="Shopping List Created!"
-                    type="success" />
-                <Alert class="mt-20 align-center" :show="showCreateItemSuccess" message="Item Updated!"
-                    type="success" />
-                <Alert class="mt-20 align-center" :show="showDeleteItemSuccess" message="Item Deleted!"
-                    type="success" />
-                <Alert class="mt-20 align-center" :show="showAddItemSuccess" message="Item added to list!"
-                    type="success" />
-                <Alert class="mt-20 align-center" :show="generalError" message="Something went wrong. Please try again."
-                    type="error" />
             </div>
+
+            <!-- ---------------------------------------------------- Alerts ---------------------------------------------------- -->
+            <Alert class="mt-20 ml-100" :show="showDeleteSuccess" message="Shopping List Deleted!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showCreateSuccess" message="Shopping List Created!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showCreateItemSuccess" message="Item Updated!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showDeleteItemSuccess" message="Item Deleted!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showAddItemSuccess" message="Item added to list!" type="success" />
+            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."
+                type="error" />
 
             <!-- ---------------------------------------------------- No list selected ---------------------------------------------------- -->
             <div v-if="selectedListId === null">
@@ -84,14 +81,15 @@
                         </div>
                     </div>
                     <div v-else-if="selectedListId !== null && selectedListItems.length === 0"
-                        class="text-gray-400 mt-4 text-center">No items in this list.</div>
+                        class="text-gray-400 mt-4 text-center">No items in this list. Click "create new item" to add
+                        items to this list.</div>
                     <div v-else class="text-gray-400 mt-4 text-center">No list selected.</div>
                 </div>
             </div>
 
             <!-- ---------------------------------------------------- Sidebar ---------------------------------------------------- -->
         </div>
-        <div class=" drawer-side">
+        <div class="drawer-side bg-base-300 w-80 min-h-screen">
             <h1 class="text-2xl font-bold text-center text-gray-300 mb-4 mx-auto mt-4">Shopping List</h1>
             <div class="w-full">
                 <button class="btn btn-ghost mb-4 mx-auto block border-gray-300 rounded-md"
@@ -102,7 +100,7 @@
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id" class="mb-2">
-                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                    <a  @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
                         :class="{ 'border-white rounded-md': selectedListId === list.id }">
                         <p v-if="list.name.length < 30">
                             {{ list.name }}
@@ -131,6 +129,17 @@
 
             <h1 class="text-1xl ml-3 mb-2">Favorite lists</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
+                <li v-for="list in favoriteList" :key="list.id" class="mb-2">
+                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                        :class="{ 'border-white rounded-md': selectedListId === list.id }">
+                        <p v-if="list.name.length < 30">
+                            {{ list.name }}
+                        </p>
+                        <p v-else>
+                            {{ list.name.slice(0, 30) + '...' }}
+                        </p>
+                    </a>
+                </li>
             </ul>
         </div>
     </div>
@@ -194,6 +203,7 @@
 
 <script setup>
 
+
 // ---------------------------------------------------- imports ----------------------------------------------------
 import Alert from '~/components/alerts/Alert.vue'
 import { ref, onMounted, computed, watch } from 'vue'
@@ -219,6 +229,7 @@ const newItemQuantity = ref(1)
 const newItemQuantityError = ref('')
 const showEditItemPopup = ref(false)
 const editingItem = ref()
+const isFavorite = ref(null)
 
 // Alerts
 const showDeleteSuccess = ref(false)
@@ -255,6 +266,10 @@ const olderList = computed(() => {
             return listUpdatedDate < threeDaysAgo
         })
         .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+})
+
+const favoriteList = computed(() => {
+    return shoppingLists.value.filter(list => list.is_favorite).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 })
 
 // ---------------------------------------------------- misc ----------------------------------------------------
@@ -585,6 +600,8 @@ function handleListClick(listId) {
     const list = shoppingLists.value.find(list => list.id === listId)
     selectedListName.value = list?.name || 'New Shopping List'
     selectedListItems.value = list?.items || []
+
+    isFavorite.value = list?.is_favorite || false
 }
 
 
@@ -609,6 +626,54 @@ async function updateListName(listId) {
     try {
         await updateList(listId, { name: selectedListName.value.trim() })
         cancelEditing();
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
+// toggle favorite
+function toggleFavorite(listId) {
+    isFavorite.value = !isFavorite.value
+    updateListFavorite(listId)
+}
+
+// update list favorite
+async function updateListFavorite(listId) {
+    try {
+        // Get CSRF cookie
+        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
+            credentials: 'include'
+        });
+
+        // Get the CSRF token from the cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        const xsrfToken = getCookie('XSRF-TOKEN');
+
+        await $fetch(`http://localhost:8000/api/shopping-lists/${listId}/favorite`, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            body: {
+                favorite: isFavorite.value
+            },
+            credentials: 'include'
+        })
+        const listIndex = shoppingLists.value.findIndex(list => list.id === listId)
+        if (listIndex !== -1) {
+            // First set the favorite status in the shopping lists array to keep data in sync
+            shoppingLists.value[listIndex].favorite = isFavorite.value
+            // Then set isFavorite to match the array value to ensure UI state matches data
+            // This double assignment helps prevent any edge cases where the values could get out of sync
+            isFavorite.value = shoppingLists.value[listIndex].favorite
+        }
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
