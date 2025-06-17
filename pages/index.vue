@@ -32,7 +32,7 @@
             <Alert class="mt-20 ml-100" :show="showAddItemSuccess" message="Item added to list!" type="success" />
             <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."
                 type="error" />
-
+            <Alert class="mt-20 ml-100" :show="showFavoriteSuccess" message="List added to favorites!" type="success" />
             <!-- ---------------------------------------------------- No list selected ---------------------------------------------------- -->
             <div v-if="selectedListId === null">
                 <h1>please select a list before creating an item</h1>
@@ -43,6 +43,9 @@
 
 
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
+                    <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name and
+                        type
+                        in the new name.</p>
                     <input type="text" v-model="selectedListName" @blur="updateListName(selectedListId)"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
 
@@ -100,7 +103,7 @@
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id" class="mb-2">
-                    <a  @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
                         :class="{ 'border-white rounded-md': selectedListId === list.id }">
                         <p v-if="list.name.length < 30">
                             {{ list.name }}
@@ -152,7 +155,8 @@
                 <h2 v-else>Creating item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
             <div class="mb-4">
-                <input v-model="newItemName" placeholder="Item name" class="input input-boredered w-full" />
+                <input v-model="newItemName" placeholder="Item name" class="input input-boredered w-full"
+                    @keydown.enter="addItem" @keydown.escape="showCreateItemPopup = false" />
                 <div v-if="newItemNameError" class="text-red-500 text-sm mt-1">
                     {{ newItemNameError }}
                 </div>
@@ -165,7 +169,8 @@
                 </div>
             </div>
             <div class="flex gap-x-4">
-                <button @click="addItem" class="btn btn-ghost border-gray-300 border-2">Add item to list</button>
+                <button @keypress.enter="addItem" @click="addItem" class="btn btn-ghost border-gray-300 border-2">Add
+                    item to list</button>
                 <button @click="showCreateItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Stop adding
                     items to list</button>
             </div>
@@ -240,6 +245,7 @@ const showCreateItemSuccess = ref(false)
 const showDeleteItemSuccess = ref(false)
 const showAddItemSuccess = ref(false)
 const generalError = ref(false)
+const showFavoriteSuccess = ref(false)
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
 const todayAndYesterday = computed(() => {
@@ -249,11 +255,14 @@ const todayAndYesterday = computed(() => {
     // 48 hours ago in UTC
     const twoDaysAgoUTC = nowUTC - 48 * 60 * 60 * 1000;
 
-    return shoppingLists.value.filter(list => {
-        const listUpdatedDate = new Date(list.updated_at);
-        const listUTC = listUpdatedDate.getTime();
-        return listUTC >= twoDaysAgoUTC && listUTC <= nowUTC;
-    }).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+    return shoppingLists.value
+        .filter(list => {
+            if (!list.is_favorite) {
+                const listUpdatedDate = new Date(list.updated_at);
+                const listUTC = listUpdatedDate.getTime();
+                return listUTC >= twoDaysAgoUTC && listUTC <= nowUTC;
+            }
+        }).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 })
 
 const olderList = computed(() => {
@@ -673,7 +682,10 @@ async function updateListFavorite(listId) {
             // Then set isFavorite to match the array value to ensure UI state matches data
             // This double assignment helps prevent any edge cases where the values could get out of sync
             isFavorite.value = shoppingLists.value[listIndex].favorite
+            window.location.reload()
         }
+        showFavoriteSuccess.value = true
+        setTimeout(() => showFavoriteSuccess.value = false, 3000)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
