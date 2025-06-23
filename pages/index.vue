@@ -11,10 +11,12 @@
                         Create New Item in selected list
                     </button>
 
-                    <button @click="deleteList(selectedListId)" class="btn btn-ghost border-gray-300 border-2">
+                    <button v-if="selectedListId !== 'all-favorite-items'" @click="deleteList(selectedListId)"
+                        class="btn btn-ghost border-gray-300 border-2">
                         Delete selected list
                     </button>
-                    <button @click="toggleFavorite(selectedListId)" class="btn btn-ghost border-gray-300 border-2">
+                    <button v-if="selectedListId !== 'all-favorite-items'" @click="FavoriteList(selectedListId)"
+                        class="btn btn-ghost border-gray-300 border-2">
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
                 </div>
@@ -61,6 +63,10 @@
                             {{ category.name }}
                         </option>
                     </select>
+                    <button v-if="selectedListId !== 'all-favorite-items'" @click="priotizeFavoriteItemsFirst()"
+                        class="btn btn-ghost border-gray-300 border-2">
+                        Priotize favorite items first
+                    </button>
                 </div>
 
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
@@ -68,17 +74,20 @@
                         and
                         type
                         in the new name. It will be saved automatically.</p>
-                    <input type="text" v-model="selectedListName" @blur="updateListName(selectedListId)"
+                    <input v-if="selectedListId !== 'all-favorite-items'" type="text" v-model="selectedListName"
+                        @blur="updateListName(selectedListId)"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
-
+                    <h2 v-else class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">All Favorite Items
+                    </h2>
 
                     <!-- ---------------------------------------------------- Header row for items ----------------------------------------------- -->
                     <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
-                        <div class="w-12">Marked</div>
-                        <div class="flex-1 pl-8">Item name</div>
+                        <div class="w-20">Favorite</div>
+                        <div class="w-20 ">Bought</div>
+                        <div class="flex-1 pl-6">Item name</div>
                         <div class="pr-9">Category</div>
-                        <div class="pr-5">Quantity</div>
-                        <div class="pr-42">Actions</div>
+                        <div class="pr-6">Quantity</div>
+                        <div class="pr-41">Actions</div>
                     </div>
 
 
@@ -86,11 +95,15 @@
                     <div v-if="selectedListItems.length && selectedListId !== null">
                         <div v-for="item in selectedListItems" :key="item.id"
                             class="flex items-center border-b border-gray-700 last:border-b-0 py-2">
-                            <div class="w-12 flex justify-start">
+                            <div class="w-20 flex justify-start">
+                                <input @click="filterByFavoriteItemsFirst(item.id)" type="checkbox" class="checkbox"
+                                    :checked="item.is_favorite" />
+                            </div>
+                            <div class="w-16 flex justify-start">
                                 <input @click="toggleItem(item.id)" type="checkbox" class="checkbox"
                                     :checked="item.is_checked" />
                             </div>
-                            <div class="flex-1 pl-8 pr-30">
+                            <div class="flex-1 pl-10 pr-30">
                                 <p v-if="item.name.length < 70">
                                     {{ item.name }}
                                 </p>
@@ -167,10 +180,11 @@
             </ul>
 
 
-            <!-- ---------------------------------------------------- Favorite lists ---------------------------------------------------- -->
+            <!-- ---------------------------------------------------- Favorite  ---------------------------------------------------- -->
             <h1 class="text-1xl ml-3 mb-2">Favorite lists</h1>
+
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in favoriteList" :key="list.id" class="mb-2">
+                <li v-for="list in favoriteListWithAll" :key="list.id" class="mb-2">
                     <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
                         :class="{ 'border-white rounded-md': selectedListId === list.id }">
                         <p v-if="list.name.length < 30">
@@ -221,12 +235,19 @@
                     {{ newItemQuantityError }}
                 </div>
             </div>
+            <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Mark new item as favorite</p>
+                <div class="w-20 flex justify-start">
+                    <input type="checkbox" class="checkbox" v-model="newItemIsFavorite" />
+                </div>
+            </div>
             <div class="flex gap-x-4">
                 <button @keypress.enter="addItem" @click="addItem" class="btn btn-ghost border-gray-300 border-2">Add
                     item to list</button>
                 <button @click="showCreateItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Stop adding
                     items to list</button>
             </div>
+
         </div>
         <div class="fixed inset-0 bg-black opacity-50 z-[9998]" @click="showCreateItemPopup = false"></div>
     </div>
@@ -242,7 +263,7 @@
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Item Name</p>
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite)"
                     v-model="editingItem.name" class="input input-boredered" />
             </div>
             <div>
@@ -261,7 +282,7 @@
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Quantity (must be a whole number)</p>
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite)"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
                     min="1" max="100" class="input input-bordered" />
                 <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
@@ -270,7 +291,7 @@
             </div>
             <div class="flex gap-x-4">
                 <button :disabled="updateItemLoading"
-                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
+                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite)"
                     class="btn btn-ghost border-gray-300 border-2">Update item</button>
                 <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
                     editing item</button>
@@ -312,6 +333,7 @@ const newItemQuantityError = ref('')
 const newItemCategoryError = ref('')
 const newItemCategory = ref('')
 const editingItemCategory = ref('')
+const newItemIsFavorite = ref(false)
 
 // Alerts
 const showDeleteSuccess = ref(false)
@@ -333,6 +355,7 @@ const textareaValue = ref('')
 const showCreateItemPopup = ref(false)
 const categories = ref([])
 const isFavorite = ref(null)
+const favoriteItemsList = ref([])
 
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
@@ -367,6 +390,15 @@ const olderList = computed(() => {
 
 const favoriteList = computed(() => {
     return shoppingLists.value.filter(list => list.is_favorite).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+})
+
+const favoriteListWithAll = computed(() => {
+    const allFavoriteItems = {
+        id: 'all-favorite-items',
+        name: 'All Favorite Items',
+        items: favoriteItemsList.value
+    }
+    return [allFavoriteItems, ...favoriteList.value]
 })
 
 
@@ -426,6 +458,7 @@ onMounted(async () => {
         shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
         handleListClick(shoppingLists.value[0].id)
         getCategories()
+        handleFavoriteList()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -524,11 +557,11 @@ async function deleteItem(itemId) {
 }
 
 // function to toggle item
-async function updateItem(itemId, name, quantity, is_checked, category_id) {
+async function updateItem(itemId, name, quantity, is_checked, category_id, is_favorite) {
     try {
         const xsrfToken = await getCsrfToken();
 
-        // Update the item
+        // Update the item in the backend
         await $fetch(`http://localhost:8000/api/shopping-list-items/${itemId}`, {
             method: 'PATCH',
             headers: {
@@ -540,12 +573,13 @@ async function updateItem(itemId, name, quantity, is_checked, category_id) {
                 name: name,
                 quantity: quantity,
                 is_checked: is_checked,
-                category_id: category_id
+                category_id: category_id,
+                is_favorite: is_favorite
             },
             credentials: 'include'
         });
 
-        // Update local state
+        // Update local state in selectedListItems
         const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
         if (itemIndex !== -1) {
             selectedListItems.value[itemIndex] = {
@@ -553,15 +587,33 @@ async function updateItem(itemId, name, quantity, is_checked, category_id) {
                 name: name,
                 quantity: quantity,
                 category_id: category_id,
-                category_id: editingItemCategory.value
+                is_favorite: is_favorite
             };
         }
-        showCreateItemSuccess.value = true
-        showEditItemPopup.value = false
-        setTimeout(() => showCreateItemSuccess.value = false, 3000) // Hide after 3 seconds
+
+        // Update the item in the main shoppingLists array
+        for (const list of shoppingLists.value) {
+            const idx = list.items.findIndex(item => item.id === itemId);
+            if (idx !== -1) {
+                list.items[idx] = {
+                    ...list.items[idx],
+                    name: name,
+                    quantity: quantity,
+                    category_id: category_id,
+                    is_checked: is_checked,
+                    is_favorite: is_favorite
+                };
+                break;
+            }
+        }
+        console.log(shoppingLists.value)
+        handleFavoriteList();
+        showCreateItemSuccess.value = true;
+        showEditItemPopup.value = false;
+        setTimeout(() => showCreateItemSuccess.value = false, 3000);
     } catch (error) {
-        generalError.value = true
-        setTimeout(() => generalError.value = false, 3000)
+        generalError.value = true;
+        setTimeout(() => generalError.value = false, 3000);
     }
 }
 
@@ -607,7 +659,8 @@ async function createNewItem() {
                 name: newItemName.value,
                 quantity: newItemQuantity.value,
                 shopping_list_id: selectedListId.value,
-                category_id: newItemCategory.value
+                category_id: newItemCategory.value,
+                is_favorite: newItemIsFavorite.value
             },
             credentials: 'include'
         })
@@ -619,6 +672,9 @@ async function createNewItem() {
 
         //clear the form
         newItemName.value = ''
+        newItemQuantity.value = ''
+        newItemCategory.value = ''
+        newItemIsFavorite.value = false
         showAddItemSuccess.value = true
         setTimeout(() => showAddItemSuccess.value = false, 3000)
     } catch (error) {
@@ -698,11 +754,19 @@ async function handleSignOut() {
 
 // Handle list click
 function handleListClick(listId) {
+    if (listId === 'all-favorite-items') {
+        selectedListId.value = 'all-favorite-items'
+        selectedListItems.value = favoriteItemsList.value
+        handleFavoriteList()
+        return
+    }
+
     const list = shoppingLists.value.find(list => list.id === listId)
     selectedListName.value = list?.name || 'New Shopping List'
     selectedListItems.value = list?.items || []
     isFavorite.value = list?.is_favorite || false
     selectedListId.value = listId
+    handleFavoriteList()
 }
 
 
@@ -717,7 +781,7 @@ function cancelEditing() {
 function toggleItem(itemId) {
     const item = selectedListItems.value.find(item => item.id === itemId);
     if (item) {
-        updateItem(itemId, item.name, item.quantity, !item.is_checked, item.category_id);
+        updateItem(itemId, item.name, item.quantity, !item.is_checked, item.category_id, item.is_favorite);
     }
 }
 
@@ -731,12 +795,6 @@ async function updateListName(listId) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
     }
-}
-
-// toggle favorite
-function toggleFavorite(listId) {
-    isFavorite.value = !isFavorite.value
-    updateListFavorite(listId)
 }
 
 
@@ -816,5 +874,36 @@ function filterListByCategory() {
         selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items
     }
 }
+
+// Toggle item
+async function filterByFavoriteItemsFirst(itemId) {
+    const item = selectedListItems.value.find(item => item.id === itemId);
+    if (item) {
+        await updateItem(itemId, item.name, item.quantity, item.is_checked, item.category_id, !item.is_favorite);
+        handleFavoriteList()
+    }
+}
+
+function priotizeFavoriteItemsFirst() {
+    searchListItemInput.value = ''
+    filterListInput.value = ''
+    selectedListItems.value = selectedListItems.value.sort((a, b) => b.is_favorite - a.is_favorite)
+}
+
+function handleFavoriteList() {
+    // Clear the array first!
+    favoriteItemsList.value = [];
+    shoppingLists.value.forEach(list => {
+        if (list.items) {
+            list.items.forEach(item => {
+                if (item.is_favorite) {
+                    favoriteItemsList.value.push(item)
+                }
+            })
+        }
+    })
+
+}
+
 
 </script>
