@@ -68,6 +68,13 @@
                         Priotize favorite items first
                     </button>
                 </div>
+              
+                <div class="flex gap-x-4 w-full max-w-6xl ml-7">
+                    <p class="text-gray-200 text-m mb-2">Total Items: {{ selectedListItems.length }}</p>
+                    <p class="text-gray-200 text-m mb-2">Items left to buy: {{ selectedListItems.filter(item =>
+                        !item.is_checked).length}}</p>
+                    <p class="text-gray-200 text-m mb-2">Total price: TODO</p>
+                </div>
 
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
                     <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name below
