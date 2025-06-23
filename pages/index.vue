@@ -3,6 +3,7 @@
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col min-h-screen bg-base-200">
 
+
             <!-- ---------------------------------------------------- Buttons ---------------------------------------------------- -->
             <div class="flex justify-between items-center p-6">
                 <div class="flex gap-x-4">
@@ -24,22 +25,20 @@
                 </div>
             </div>
 
+
             <!-- ---------------------------------------------------- Alerts ---------------------------------------------------- -->
             <Alert class="mt-20 ml-100" :show="showDeleteSuccess" message="Shopping List Deleted!" type="success" />
             <Alert class="mt-20 ml-100" :show="showCreateSuccess" message="Shopping List Created!" type="success" />
             <Alert class="mt-20 ml-100" :show="showCreateItemSuccess" message="Item Updated!" type="success" />
             <Alert class="mt-20 ml-100" :show="showDeleteItemSuccess" message="Item Deleted!" type="success" />
             <Alert class="mt-20 ml-100" :show="showAddItemSuccess" message="Item added to list!" type="success" />
-            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."
-                type="error" />
+            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."type="error" />
             <Alert class="mt-20 ml-100" :show="showFavoriteSuccess" message="List added to favorites!" type="success" />
-            <Alert class="mt-20 ml-100" :show="showLastListDeleted"
-                message="Last list deleted. New list was created automatically." type="success" />
-            <!-- ---------------------------------------------------- No list selected ---------------------------------------------------- -->
+            <Alert class="mt-20 ml-100" :show="showLastListDeleted" message="Last list deleted. New list was created automatically." type="success" />
+           
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
-
 
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
                     <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name and
@@ -47,6 +46,7 @@
                         in the new name. It will be saved automatically.</p>
                     <input type="text" v-model="selectedListName" @blur="updateListName(selectedListId)"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
+
 
                     <!-- ---------------------------------------------------- Header row for items ----------------------------------------------- -->
                     <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
@@ -56,6 +56,7 @@
                         <div class="pr-5">Quantity</div>
                         <div class="pr-42">Actions</div>
                     </div>
+
 
                     <!-- ---------------------------------------------------- Items in list ---------------------------------------------------- -->
                     <div v-if="selectedListItems.length && selectedListId !== null">
@@ -74,7 +75,7 @@
                                 </p>
                             </div>
                             <div class="w-24 text-left pl-4 pr-22">
-                                {{ item.category }}
+                                {{ getCategoryName(item.category_id) }}
                             </div>
                             <div class="w-24 text-left pl-4">x{{ item.quantity }}</div>
                             <div class="w-32 flex justify-start">
@@ -84,6 +85,9 @@
                             <button @click="openEditItemPopup(item)" class="btn btn-ghost border-gray-300 border-2">
                                 Edit Item
                             </button>
+                            <div v-if="updateItemLoading" class="w-32 flex justify-start">
+                                <span class="loading loading-spinner loading-xs"></span>
+                            </div>
                         </div>
                     </div>
                     <div v-else-if="selectedListId !== null && selectedListItems.length === 0"
@@ -92,6 +96,7 @@
                     <div v-else class="text-gray-400 mt-4 text-center">No list selected.</div>
                 </div>
             </div>
+
 
             <!-- ---------------------------------------------------- Sidebar ---------------------------------------------------- -->
         </div>
@@ -103,6 +108,8 @@
                     new list</button>
             </div>
 
+
+            <!-- ---------------------------------------------------- Today & Yesterday ---------------------------------------------------- -->
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in todayAndYesterday" :key="list.id" class="mb-2">
@@ -118,6 +125,8 @@
                 </li>
             </ul>
 
+
+            <!-- ---------------------------------------------------- Older than 3 days ---------------------------------------------------- -->
             <h1 class="text-1xl ml-3 mb-2">Older than 3 days</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in olderList" :key="list.id">
@@ -133,6 +142,8 @@
                 </li>
             </ul>
 
+
+            <!-- ---------------------------------------------------- Favorite lists ---------------------------------------------------- -->
             <h1 class="text-1xl ml-3 mb-2">Favorite lists</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
                 <li v-for="list in favoriteList" :key="list.id" class="mb-2">
@@ -150,6 +161,7 @@
         </div>
     </div>
 
+
     <!-- ---------------------------------------------------- Create item popup ---------------------------------------------------- -->
     <div v-if="showCreateItemPopup" class="fixed inset-0 flex items-center justify-center">
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
@@ -165,10 +177,10 @@
                 </div>
             </div>
             <div class="mb-4">
-                <select v-model="newItemCategory" class="select w-full mb-4" placeholder="Pick a category">
+                <select v-model="newItemCategory" class="select w-full mb-4">
                     <option disabled selected>Pick a category</option>
-                    <option v-for="category in categories" :key="category">
-                        {{ category }}
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                        {{ category.name }}
                     </option>
                 </select>
                 <div v-if="newItemCategoryError" class="text-red-500 text-sm mt-1">
@@ -192,6 +204,7 @@
         <div class="fixed inset-0 bg-black opacity-50 z-[9998]" @click="showCreateItemPopup = false"></div>
     </div>
 
+
     <!-- ---------------------------------------------------- Edit item popup ---------------------------------------------------- -->
     <div v-if="showEditItemPopup" class="fixed inset-0 flex items-center justify-center">
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[300px] min-w-[600px]">
@@ -201,14 +214,15 @@
             </div>
             <div class="mb-4">
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity)"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
                     v-model="editingItem.name" placeholder="Item name" class="input input-boredered w-full" />
             </div>
             <div class="mb-4">
-                <select v-model="editingItemCategory" class="select w-full mb-4" :default="editingItem.category">
+                <select v-model="editingItemCategory" class="select w-full mb-4">
                     <option disabled selected>Pick a category</option>
-                    <option v-for="category in categories" :key="category">
-                        {{ category }}
+                    <option v-for="category in categories" :key="category.id" :value="category.id"
+                        :default="editingItem.category_id">
+                        {{ category.name }}
                     </option>
                 </select>
                 <div v-if="editingItemCategoryError" class="text-red-500 text-sm mt-1">
@@ -217,7 +231,7 @@
             </div>
             <div class="mb-4">
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity)"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItem.category_id)"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
                     min="1" max="100" class="input input-bordered w-full" />
                 <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
@@ -225,7 +239,9 @@
                 </div>
             </div>
             <div class="flex gap-x-4">
-                <button @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity)"
+                <button
+                    :disabled="updateItemLoading"
+                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItem.category_id)"
                     class="btn btn-ghost border-gray-300 border-2">Update item</button>
                 <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
                     editing item</button>
@@ -266,20 +282,7 @@ const editingItem = ref()
 const isFavorite = ref(null)
 const newItemCategory = ref('')
 const editingItemCategory = ref('')
-const categories = [
-    'Fruits',
-    'Vegetables',
-    'Meat',
-    'Dairy',
-    'Bakery',
-    'Drinks',
-    'Cleaning',
-    'Household',
-    'Personal Care',
-    'Baby',
-    'Pet',
-    'Other'
-]
+const categories = ref([])
 
 // Alerts
 const showDeleteSuccess = ref(false)
@@ -292,6 +295,9 @@ const showAddItemSuccess = ref(false)
 const generalError = ref(false)
 const showFavoriteSuccess = ref(false)
 const showLastListDeleted = ref(false)
+
+// other
+const updateItemLoading = ref(false)
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
 const todayAndYesterday = computed(() => {
@@ -394,6 +400,7 @@ onMounted(async () => {
         shoppingLists.value = response
         shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
         handleListClick(shoppingLists.value[0].id)
+        getCategories()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -433,6 +440,7 @@ async function createNewList() {
 
         shoppingLists.value.push(newList)
         showCreateSuccess.value = true
+        handleListClick(newList.id)
         setTimeout(() => showCreateSuccess.value = false, 3000) // Hide after 3 seconds
 
     } catch (error) {
@@ -526,7 +534,7 @@ async function deleteItem(itemId) {
 }
 
 // function to toggle item
-async function updateItem(itemId, name, quantity, is_checked) {
+async function updateItem(itemId, name, quantity, is_checked, category_id) {
     try {
         // Get CSRF cookie
         await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
@@ -553,7 +561,7 @@ async function updateItem(itemId, name, quantity, is_checked) {
                 name: name,
                 quantity: quantity,
                 is_checked: is_checked,
-                category: editingItemCategory.value
+                category_id: category_id    
             },
             credentials: 'include'
         });
@@ -561,7 +569,12 @@ async function updateItem(itemId, name, quantity, is_checked) {
         // Update local state
         const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
         if (itemIndex !== -1) {
-            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], name: name, quantity: quantity, category: editingItemCategory.value };
+            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], 
+                name: name, 
+                quantity: quantity, 
+                category_id: category_id,
+                category_id: editingItemCategory.value
+            };
         }
         showCreateItemSuccess.value = true
         showEditItemPopup.value = false
@@ -636,7 +649,7 @@ async function createNewItem() {
                 name: newItemName.value,
                 quantity: newItemQuantity.value,
                 shopping_list_id: selectedListId.value,
-                category: newItemCategory.value
+                category_id: newItemCategory.value
             },
             credentials: 'include'
         })
@@ -656,61 +669,37 @@ async function createNewItem() {
     }
 }
 
-// ---------------------------------------------------- other functions ----------------------------------------------------
-async function handleSignOut() {
+
+// get all categories
+async function getCategories() {
     try {
-        await logout()
-        navigateTo('/auth/login')
+        // Get CSRF cookie
+        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
+            credentials: 'include'
+        });
+
+        // Get the CSRF token from the cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        const xsrfToken = getCookie('XSRF-TOKEN');
+
+        const response = await $fetch('http://localhost:8000/api/categories', {
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        })
+        categories.value = response
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
     }
 }
 
-
-// Handle list click
-function handleListClick(listId) {
-    selectedListId.value = listId
-    const list = shoppingLists.value.find(list => list.id === listId)
-    selectedListName.value = list?.name || 'New Shopping List'
-    selectedListItems.value = list?.items || []
-
-    isFavorite.value = list?.is_favorite || false
-}
-
-
-// Cancel editing
-function cancelEditing() {
-    editingItemId.value = null;
-    editingName.value = '';
-}
-
-
-// Toggle item
-function toggleItem(itemId) {
-    const item = selectedListItems.value.find(item => item.id === itemId);
-    if (item) {
-        updateItem(itemId, item.name, item.quantity, !item.is_checked);
-    }
-}
-
-
-// Update list name
-async function updateListName(listId) {
-    try {
-        await updateList(listId, { name: selectedListName.value.trim() })
-        cancelEditing();
-    } catch (error) {
-        generalError.value = true
-        setTimeout(() => generalError.value = false, 3000)
-    }
-}
-
-// toggle favorite
-function toggleFavorite(listId) {
-    isFavorite.value = !isFavorite.value
-    updateListFavorite(listId)
-}
 
 // update list favorite
 async function updateListFavorite(listId) {
@@ -758,6 +747,64 @@ async function updateListFavorite(listId) {
 }
 
 
+// ---------------------------------------------------- other functions ----------------------------------------------------
+async function handleSignOut() {
+    try {
+        await logout()
+        navigateTo('/auth/login')
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
+
+// Handle list click
+function handleListClick(listId) {
+    const list = shoppingLists.value.find(list => list.id === listId)
+    selectedListName.value = list?.name || 'New Shopping List'
+    selectedListItems.value = list?.items || []
+    isFavorite.value = list?.is_favorite || false
+    selectedListId.value = listId
+}
+
+
+// Cancel editing
+function cancelEditing() {
+    editingItemId.value = null;
+    editingName.value = '';
+}
+
+
+// Toggle item
+function toggleItem(itemId) {
+    const item = selectedListItems.value.find(item => item.id === itemId);
+    if (item) {
+        updateItem(itemId, item.name, item.quantity, !item.is_checked, item.category_id);
+    }
+}
+
+
+// Update list name
+async function updateListName(listId) {
+    try {
+        await updateList(listId, { name: selectedListName.value.trim() })
+        cancelEditing();
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
+// toggle favorite
+function toggleFavorite(listId) {
+    isFavorite.value = !isFavorite.value
+    updateListFavorite(listId)
+}
+
+
+
+
 // Add item
 function addItem() {
     if (!isInteger(newItemQuantity.value)) {
@@ -784,7 +831,7 @@ function addItem() {
 function openEditItemPopup(item) {
     editingItem.value = item
     showEditItemPopup.value = true
-    editingItemCategory.value = item.category
+    editingItemCategory.value = item.category_id
 }
 
 
@@ -799,5 +846,12 @@ async function getCsrfToken() {
     if (parts.length === 2) return parts.pop().split(';').shift();
     return null;
 }
+
+function getCategoryName(categoryId) {
+    // Use == for loose comparison (string/number), or convert both to Number
+    const cat = categories.value.find(c => c.id === categoryId)
+    return cat ? cat.name : 'Unknown'
+}
+
 
 </script>
