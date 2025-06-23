@@ -41,8 +41,9 @@
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
-                <p class="text-gray-400 text-sm mb-4 text-left w-full max-w-6xl">Search for an item by writing in the search bar. Or filter by category by selecting a category from the dropdown menu.</p>
-                <div class="flex gap-x-4 w-full max-w-6xl">
+                <p class="text-gray-400 text-sm mb-4 text-left w-full max-w-6xl ml-6">Search for an item by writing in
+                    the search bar. Or filter by category by selecting a category from the dropdown menu.</p>
+                <div class="flex gap-x-4 w-full max-w-6xl ml-7">
                     <label class="input">
                         <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
@@ -63,7 +64,8 @@
                 </div>
 
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
-                    <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name and
+                    <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name below
+                        and
                         type
                         in the new name. It will be saved automatically.</p>
                     <input type="text" v-model="selectedListName" @blur="updateListName(selectedListId)"
@@ -192,6 +194,7 @@
                 <h2 v-else>Creating item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
             <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Item Name</p>
                 <input v-model="newItemName" placeholder="Item name" class="input input-boredered"
                     @keydown.enter="addItem" @keydown.escape="showCreateItemPopup = false" />
                 <div v-if="newItemNameError" class="text-red-500 text-sm mt-1">
@@ -199,6 +202,7 @@
                 </div>
             </div>
             <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Category (select a category from the dropdown menu)</p>
                 <select v-model="newItemCategory" class="select mb-4">
                     <option disabled selected>Pick a category</option>
                     <option v-for="category in categories" :key="category.id" :value="category.id">
@@ -210,6 +214,7 @@
                 </div>
             </div>
             <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Quantity (must be a whole number)</p>
                 <input v-model="newItemQuantity" type="number" placeholder="Quantity, must be a whole number" step="1"
                     min="1" max="100" class="input input-bordered" />
                 <div v-if="newItemQuantityError" class="text-red-500 text-sm mt-1">
@@ -231,15 +236,17 @@
     <div v-if="showEditItemPopup" class="fixed inset-0 flex items-center justify-center">
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[300px] min-w-[600px]">
             <div class="mb-4">
-                <h2 v-if="selectedListName.length < 30">Editing item in {{ selectedListName }}</h2>
-                <h2 v-else>Editing item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
+                <h2 v-if="selectedListName.length < 30">Editing item in: {{ selectedListName }}</h2>
+                <h2 v-else>Editing item in: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
             <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Item Name</p>
                 <input @keydown.escape="showEditItemPopup = false"
                     @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
-                    v-model="editingItem.name" placeholder="Item name" class="input input-boredered" />
+                    v-model="editingItem.name" class="input input-boredered" />
             </div>
-            <div class="mb-4">
+            <div>
+                <p class="text-gray-400 text-sm mb-2">Category</p>
                 <select v-model="editingItemCategory" class="select w-full mb-4">
                     <option disabled selected>Pick a category</option>
                     <option v-for="category in categories" :key="category.id" :value="category.id"
@@ -252,6 +259,7 @@
                 </div>
             </div>
             <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Quantity (must be a whole number)</p>
                 <input @keydown.escape="showEditItemPopup = false"
                     @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
@@ -366,18 +374,7 @@ const favoriteList = computed(() => {
 const debouncedSaveList = useDebounceFn(async () => {
     if (!selectedListId.value) return;
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         await $fetch(`http://localhost:8000/api/shopping-lists/${selectedListId.value}`, {
             method: 'PATCH',
@@ -440,18 +437,7 @@ onMounted(async () => {
 // Create new list
 async function createNewList() {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         // Create the list
         const newList = await $fetch('http://localhost:8000/api/shopping-lists', {
@@ -480,18 +466,7 @@ async function createNewList() {
 // Delete list
 async function deleteList(id) {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         // Delete the list
         await $fetch(`http://localhost:8000/api/shopping-lists/${id}`, {
@@ -512,11 +487,9 @@ async function deleteList(id) {
             favoriteList.value.length === 0
         ) {
             await createNewList()
-            handleListClick(shoppingLists.value[0].id)
             showLastListDeleted.value = true
             setTimeout(() => showLastListDeleted.value = false, 3000)
         } else if (shoppingLists.value.length > 0) {
-            handleListClick(shoppingLists.value[0].id)
             showDeleteSuccess.value = true
             setTimeout(() => showDeleteSuccess.value = false, 3000)
         }
@@ -529,18 +502,7 @@ async function deleteList(id) {
 // function to delete item from list
 async function deleteItem(itemId) {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         // Delete the item
         await $fetch(`http://localhost:8000/api/shopping-list-items/${itemId}`, {
@@ -564,18 +526,7 @@ async function deleteItem(itemId) {
 // function to toggle item
 async function updateItem(itemId, name, quantity, is_checked, category_id) {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         // Update the item
         await $fetch(`http://localhost:8000/api/shopping-list-items/${itemId}`, {
@@ -616,18 +567,7 @@ async function updateItem(itemId, name, quantity, is_checked, category_id) {
 
 async function updateList(listId, updates) {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         // Update the item
         await $fetch(`http://localhost:8000/api/shopping-lists/${listId}`, {
@@ -654,18 +594,7 @@ async function updateList(listId, updates) {
 
 async function createNewItem() {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         // create the item
         const newItem = await $fetch('http://localhost:8000/api/shopping-list-items', {
@@ -702,18 +631,7 @@ async function createNewItem() {
 // get all categories
 async function getCategories() {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         const response = await $fetch('http://localhost:8000/api/categories', {
             headers: {
@@ -734,18 +652,7 @@ async function getCategories() {
 // update list favorite
 async function updateListFavorite(listId) {
     try {
-        // Get CSRF cookie
-        await $fetch('http://localhost:8000/sanctum/csrf-cookie', {
-            credentials: 'include'
-        });
-
-        // Get the CSRF token from the cookie
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-        }
-        const xsrfToken = getCookie('XSRF-TOKEN');
+        const xsrfToken = await getCsrfToken();
 
         await $fetch(`http://localhost:8000/api/shopping-lists/${listId}/favorite`, {
             method: 'PATCH',
@@ -872,9 +779,11 @@ async function getCsrfToken() {
 
     // Get the CSRF token from the cookie
     const value = `; ${document.cookie}`;
-    const parts = value.split(`; CSRF-TOKEN=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return null;
+    const parts = value.split(`; XSRF-TOKEN=`);
+    if (parts.length === 2) {
+        return decodeURIComponent(parts.pop().split(';').shift());
+    }
+    throw new Error('CSRF token not found');
 }
 
 function getCategoryName(categoryId) {
@@ -885,6 +794,8 @@ function getCategoryName(categoryId) {
 
 function searchListItems() {
     const searchItem = searchListItemInput.value.toLowerCase()
+    filterListInput.value = ''
+
     if (searchItem.length > 0) {
         selectedListItems.value = selectedListItems.value.filter(item => item.name.toLowerCase().includes(searchItem))
     } else {
@@ -893,8 +804,9 @@ function searchListItems() {
     }
 }
 
-function filterListByCategory(){
+function filterListByCategory() {
     const selectedCategoryId = filterListInput.value
+    searchListItemInput.value = ''
 
     // we check if category is s
     if (selectedCategoryId !== '') {
