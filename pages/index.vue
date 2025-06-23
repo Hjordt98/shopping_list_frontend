@@ -41,7 +41,8 @@
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
-                <div>
+                <p class="text-gray-400 text-sm mb-4 text-left w-full max-w-6xl">Search for an item by writing in the search bar. Or filter by category by selecting a category from the dropdown menu.</p>
+                <div class="flex gap-x-4 w-full max-w-6xl">
                     <label class="input">
                         <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
@@ -53,7 +54,7 @@
                         <input type="search" required placeholder="Search for an item" v-model="searchListItemInput"
                             @input="searchListItems()" />
                     </label>
-                    <select v-model="filterListInput" class="select w-full mb-4" @change="filterListByCategory()">
+                    <select v-model="filterListInput" class="select mb-4" @change="filterListByCategory()">
                         <option value="">Show All Items</option>
                         <option v-for="category in categories" :key="category.id" :value="category.id">
                             {{ category.name }}
@@ -191,14 +192,14 @@
                 <h2 v-else>Creating item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
             <div class="mb-4">
-                <input v-model="newItemName" placeholder="Item name" class="input input-boredered w-full"
+                <input v-model="newItemName" placeholder="Item name" class="input input-boredered"
                     @keydown.enter="addItem" @keydown.escape="showCreateItemPopup = false" />
                 <div v-if="newItemNameError" class="text-red-500 text-sm mt-1">
                     {{ newItemNameError }}
                 </div>
             </div>
             <div class="mb-4">
-                <select v-model="newItemCategory" class="select w-full mb-4">
+                <select v-model="newItemCategory" class="select mb-4">
                     <option disabled selected>Pick a category</option>
                     <option v-for="category in categories" :key="category.id" :value="category.id">
                         {{ category.name }}
@@ -210,7 +211,7 @@
             </div>
             <div class="mb-4">
                 <input v-model="newItemQuantity" type="number" placeholder="Quantity, must be a whole number" step="1"
-                    min="1" max="100" class="input input-bordered w-full" />
+                    min="1" max="100" class="input input-bordered" />
                 <div v-if="newItemQuantityError" class="text-red-500 text-sm mt-1">
                     {{ newItemQuantityError }}
                 </div>
@@ -236,7 +237,7 @@
             <div class="mb-4">
                 <input @keydown.escape="showEditItemPopup = false"
                     @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
-                    v-model="editingItem.name" placeholder="Item name" class="input input-boredered w-full" />
+                    v-model="editingItem.name" placeholder="Item name" class="input input-boredered" />
             </div>
             <div class="mb-4">
                 <select v-model="editingItemCategory" class="select w-full mb-4">
@@ -252,16 +253,16 @@
             </div>
             <div class="mb-4">
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItem.category_id)"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
-                    min="1" max="100" class="input input-bordered w-full" />
+                    min="1" max="100" class="input input-bordered" />
                 <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
                     {{ editingItemQuantityError }}
                 </div>
             </div>
             <div class="flex gap-x-4">
                 <button :disabled="updateItemLoading"
-                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItem.category_id)"
+                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory)"
                     class="btn btn-ghost border-gray-300 border-2">Update item</button>
                 <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
                     editing item</button>
@@ -283,26 +284,26 @@ import { isInteger, isEmpty } from 'usemods'
 const { logout } = useSanctumAuth()
 
 // ---------------------------------------------------- computed properties ----------------------------------------------------
-// Lists and items
+// Lists
 const shoppingLists = ref([])
-const textareaValue = ref('')
 const selectedListId = ref(null)
 const selectedListName = ref('')
 const selectedListItems = ref([])
-const showCreateItemPopup = ref(false)
+
+// Editing item
 const editingItemId = ref(null)
 const editingName = ref('')
 const editingItemCategoryError = ref('')
+const showEditItemPopup = ref(false)
+const editingItem = ref()
+
+// Creating item
 const newItemName = ref('')
 const newItemQuantity = ref(1)
 const newItemQuantityError = ref('')
 const newItemCategoryError = ref('')
-const showEditItemPopup = ref(false)
-const editingItem = ref()
-const isFavorite = ref(null)
 const newItemCategory = ref('')
 const editingItemCategory = ref('')
-const categories = ref([])
 
 // Alerts
 const showDeleteSuccess = ref(false)
@@ -320,6 +321,11 @@ const showLastListDeleted = ref(false)
 const updateItemLoading = ref(false)
 const searchListItemInput = ref('')
 const filterListInput = ref('')
+const textareaValue = ref('')
+const showCreateItemPopup = ref(false)
+const categories = ref([])
+const isFavorite = ref(null)
+
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
 const todayAndYesterday = computed(() => {
@@ -887,17 +893,15 @@ function searchListItems() {
     }
 }
 
-function filterListByCategory() {
+function filterListByCategory(){
     const selectedCategoryId = filterListInput.value
 
-    if (selectedCategoryId && selectedCategoryId !== '') {
-        // Get the original items from the selected list
-        const originalItems = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
-        // Filter by category_id (convert to number for comparison)
+    // we check if category is s
+    if (selectedCategoryId !== '') {
+        const originalItems = shoppingLists.value.find(list => list.id === selectedListId.value)?.items
         selectedListItems.value = originalItems.filter(item => item.category_id === parseInt(selectedCategoryId))
     } else {
-        // Reset to show all items
-        selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+        selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items
     }
 }
 
