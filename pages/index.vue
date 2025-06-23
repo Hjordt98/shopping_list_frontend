@@ -32,13 +32,34 @@
             <Alert class="mt-20 ml-100" :show="showCreateItemSuccess" message="Item Updated!" type="success" />
             <Alert class="mt-20 ml-100" :show="showDeleteItemSuccess" message="Item Deleted!" type="success" />
             <Alert class="mt-20 ml-100" :show="showAddItemSuccess" message="Item added to list!" type="success" />
-            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."type="error" />
+            <Alert class="mt-20 ml-100" :show="generalError" message="Something went wrong. Please try again."
+                type="error" />
             <Alert class="mt-20 ml-100" :show="showFavoriteSuccess" message="List added to favorites!" type="success" />
-            <Alert class="mt-20 ml-100" :show="showLastListDeleted" message="Last list deleted. New list was created automatically." type="success" />
-           
+            <Alert class="mt-20 ml-100" :show="showLastListDeleted"
+                message="Last list deleted. New list was created automatically." type="success" />
+
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
+                <div>
+                    <label class="input">
+                        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
+                                stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </g>
+                        </svg>
+                        <input type="search" required placeholder="Search for an item" v-model="searchListItemInput"
+                            @input="searchListItems()" />
+                    </label>
+                    <select v-model="filterListInput" class="select w-full mb-4" @change="filterListByCategory()">
+                        <option value="">Show All Items</option>
+                        <option v-for="category in categories" :key="category.id" :value="category.id">
+                            {{ category.name }}
+                        </option>
+                    </select>
+                </div>
 
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
                     <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name and
@@ -239,8 +260,7 @@
                 </div>
             </div>
             <div class="flex gap-x-4">
-                <button
-                    :disabled="updateItemLoading"
+                <button :disabled="updateItemLoading"
                     @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItem.category_id)"
                     class="btn btn-ghost border-gray-300 border-2">Update item</button>
                 <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
@@ -298,6 +318,8 @@ const showLastListDeleted = ref(false)
 
 // other
 const updateItemLoading = ref(false)
+const searchListItemInput = ref('')
+const filterListInput = ref('')
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
 const todayAndYesterday = computed(() => {
@@ -561,7 +583,7 @@ async function updateItem(itemId, name, quantity, is_checked, category_id) {
                 name: name,
                 quantity: quantity,
                 is_checked: is_checked,
-                category_id: category_id    
+                category_id: category_id
             },
             credentials: 'include'
         });
@@ -569,9 +591,10 @@ async function updateItem(itemId, name, quantity, is_checked, category_id) {
         // Update local state
         const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
         if (itemIndex !== -1) {
-            selectedListItems.value[itemIndex] = { ...selectedListItems.value[itemIndex], 
-                name: name, 
-                quantity: quantity, 
+            selectedListItems.value[itemIndex] = {
+                ...selectedListItems.value[itemIndex],
+                name: name,
+                quantity: quantity,
                 category_id: category_id,
                 category_id: editingItemCategory.value
             };
@@ -694,6 +717,7 @@ async function getCategories() {
             credentials: 'include'
         })
         categories.value = response
+        console.log(categories)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -853,5 +877,28 @@ function getCategoryName(categoryId) {
     return cat ? cat.name : 'Unknown'
 }
 
+function searchListItems() {
+    const searchItem = searchListItemInput.value.toLowerCase()
+    if (searchItem.length > 0) {
+        selectedListItems.value = selectedListItems.value.filter(item => item.name.toLowerCase().includes(searchItem))
+    } else {
+        selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+        searchListItemInput.value = ''
+    }
+}
+
+function filterListByCategory() {
+    const selectedCategoryId = filterListInput.value
+
+    if (selectedCategoryId && selectedCategoryId !== '') {
+        // Get the original items from the selected list
+        const originalItems = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+        // Filter by category_id (convert to number for comparison)
+        selectedListItems.value = originalItems.filter(item => item.category_id === parseInt(selectedCategoryId))
+    } else {
+        // Reset to show all items
+        selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+    }
+}
 
 </script>
