@@ -606,7 +606,7 @@ async function updateItem(itemId, name, quantity, is_checked, category_id, is_fa
                 break;
             }
         }
-        console.log(shoppingLists.value)
+        sortSelectedListItemsByCategory()
         handleFavoriteList();
         showCreateItemSuccess.value = true;
         showEditItemPopup.value = false;
@@ -758,6 +758,7 @@ function handleListClick(listId) {
         selectedListId.value = 'all-favorite-items'
         selectedListItems.value = favoriteItemsList.value
         handleFavoriteList()
+        sortSelectedListItemsByCategory()
         return
     }
 
@@ -767,6 +768,7 @@ function handleListClick(listId) {
     isFavorite.value = list?.is_favorite || false
     selectedListId.value = listId
     handleFavoriteList()
+    sortSelectedListItemsByCategory()
 }
 
 
@@ -902,8 +904,10 @@ function handleFavoriteList() {
             })
         }
     })
-
 }
 
+function sortSelectedListItemsByCategory() {
+    selectedListItems.value = selectedListItems.value.sort((a, b) => a.category_id - b.category_id)
+}
 
 </script>
