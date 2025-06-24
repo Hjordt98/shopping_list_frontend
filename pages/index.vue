@@ -296,12 +296,12 @@
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Item Name</p>
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite, editingItemPricePerUnit)"
+                    @keydown.enter="updateItemWithValidation"
                     v-model="editingItem.name" class="input input-boredered" />
             </div>
             <div>
                 <p class="text-gray-400 text-sm mb-2">Category</p>
-                <select v-model="editingItemCategory" class="select w-full mb-4">
+                <select v-model="editingItem.category_id" class="select w-full mb-4">
                     <option disabled selected>Pick a category</option>
                     <option v-for="category in categories" :key="category.id" :value="category.id"
                         :default="editingItem.category_id">
@@ -315,7 +315,7 @@
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Quantity (must be a whole number)</p>
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite, editingItemPricePerUnit)"
+                    @keydown.enter="updateItemWithValidation"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
                     min="1" max="100" class="input input-bordered" />
                 <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
@@ -324,15 +324,15 @@
             </div>
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Price per unit</p>
-                <input v-model="editingItemPricePerUnit" type="number" placeholder="Price per unit"
+                <input v-model="editingItem.price_per_unit" type="number" placeholder="Price per unit"
                     class="input input-bordered" step="0.01" min="0" />
-                <!-- <div v-if="editingItemPricePerUnitError" class="text-red-500 text-sm mt-1">
-                    {{ editingItemPricePerUnitError }}
-                </div> -->
+                <div v-if="newItemPricePerUnitError" class="text-red-500 text-sm mt-1">
+                    {{ newItemPricePerUnitError }}
+                </div>
             </div>
             <div class="flex gap-x-4">
                 <button :disabled="updateItemLoading"
-                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite, editingItemPricePerUnit)"
+                    @click="updateItemWithValidation"
                     class="btn btn-ghost border-gray-300 border-2">Update item</button>
                 <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
                     editing item</button>
@@ -361,19 +361,12 @@ const selectedListName = ref('')
 const selectedListItems = ref([])
 
 // Editing item
-const editingItemId = ref(null)
-const editingName = ref('')
-const editingItemCategoryError = ref('')
-const showEditItemPopup = ref(false)
 const editingItem = ref()
-const editingItemPricePerUnit = ref(0)
-
 
 // Creating item
 const newItemName = ref('')
 const newItemQuantity = ref(1)
-const newItemQuantityError = ref('')
-const newItemCategoryError = ref('')
+
 const newItemCategory = ref('')
 const editingItemCategory = ref('')
 const newItemIsFavorite = ref(false)
@@ -397,12 +390,22 @@ const showCreateItemPopup = ref(false)
 const categories = ref([])
 const isFavorite = ref(null)
 const favoriteItemsList = ref([])
+const showEditItemPopup = ref(false)
 
 // Errors
+const generalError = ref(false)
+
+
 const newItemPricePerUnitError = ref('')
 const newItemNameError = ref('')
-const generalError = ref(false)
+const newItemQuantityError = ref('')
+const newItemCategoryError = ref('')
+
 const editingItemQuantityError = ref('')
+const editingItemCategoryError = ref('')
+const editingItemPricePerUnitError = ref('')
+const editingItemNameError = ref('')
+
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
 const todayAndYesterdayLists = computed(() => {
@@ -531,7 +534,7 @@ async function createNewList() {
             credentials: 'include'
         });
 
-        updateLocalShoppingListsWithNewList(newList)  
+        updateLocalShoppingListsWithNewList(newList)
 
         handleListClick(newList.id)
 
@@ -622,7 +625,7 @@ async function updateItem(itemId, name, quantity, is_checked, category_id, is_fa
         updateLocalShoppingLists(itemId, name, quantity, category_id, is_checked, is_favorite)
 
         sortSelectedListItemsByCategory()
-        
+
         handleFavoriteList();
 
         showCreateItemSuccess.value = true;
@@ -811,33 +814,17 @@ async function updateListName(listId) {
 
 // Add item
 function addItem() {
-    if (!isInteger(newItemQuantity.value)) {
-        newItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
-        return
+    const isValid = validateItemInputs(
+        newItemName.value,
+        newItemQuantity.value,
+        newItemCategory.value,
+        newItemPricePerUnit.value,
+        false
+    )
+    if (isValid) {
+        sortShoppingLists()
+        createNewItem()
     }
-
-    if (isEmpty(newItemCategory.value)) {
-        newItemCategoryError.value = 'Category is required. Please pick a category.'
-        return
-    }
-
-    if (isEmpty(newItemPricePerUnit.value)) {
-        newItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
-        return
-    }
-
-    const priceStr = newItemPricePerUnit.value.toString()
-    if (!/^\d+(\.\d{1,2})?$/.test(priceStr)) {
-        newItemPricePerUnitError.value = 'Price per unit can have maximum 2 decimal places.'
-        return
-    }
-
-    if (isEmpty(newItemName.value)) {
-        newItemNameError.value = 'Item name is required. Please enter a name for the item.'
-        return
-    }
-    shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-    createNewItem()
 
 }
 
@@ -1001,18 +988,99 @@ function sortShoppingLists() {
 
 async function checkIfListisEmpty() {
     if (
-            shoppingLists.value.length === 0 &&
-            olderLists.value.length === 0 &&
-            favoriteLists.value.length === 0
-        ) {
-            await createNewList()
-            showLastListDeleted.value = true
-            setTimeout(() => showLastListDeleted.value = false, 3000)
-        } else if (shoppingLists.value.length > 0) {
-            showDeleteSuccess.value = true
-            setTimeout(() => showDeleteSuccess.value = false, 3000)
-        }
+        shoppingLists.value.length === 0 &&
+        olderLists.value.length === 0 &&
+        favoriteLists.value.length === 0
+    ) {
+        await createNewList()
+        showLastListDeleted.value = true
+        setTimeout(() => showLastListDeleted.value = false, 3000)
+    } else if (shoppingLists.value.length > 0) {
+        showDeleteSuccess.value = true
+        setTimeout(() => showDeleteSuccess.value = false, 3000)
+    }
 }
 
+function validateItemInputs(name, quantity, category, pricePerUnit, isEditing = false) {
+ 
+    if (isEditing) {
+        editingItemQuantityError.value = ''
+        editingItemCategoryError.value = ''
+        editingItemPricePerUnitError.value = ''
+        editingItemNameError.value = ''
+    } else {
+        newItemQuantityError.value = ''
+        newItemCategoryError.value = ''
+        newItemPricePerUnitError.value = ''
+        newItemNameError.value = ''
+    }
 
+    let hasErrors = false
+
+    if (!isInteger(quantity)) {
+        if (isEditing) {
+            editingItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
+        } else {
+            newItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
+        }
+        hasErrors = true
+    }
+
+    if (isEmpty(category)) {
+        if (isEditing) {
+            editingItemCategoryError.value = 'Category is required. Please pick a category.'
+        } else {
+            newItemCategoryError.value = 'Category is required. Please pick a category.'
+        }
+        hasErrors = true
+    }
+
+    if (isEmpty(pricePerUnit)) {
+        if (isEditing) {
+            editingItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
+        } else {
+            newItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
+        }
+        hasErrors = true
+    }
+
+    const priceStr = pricePerUnit.toString()
+    if (!/^\d+(\.\d{1,2})?$/.test(priceStr)) {
+        newItemPricePerUnitError.value = 'Price per unit can have maximum 2 decimal places.'
+        hasErrors = true
+    }
+
+    if (isEmpty(name)) {
+        if (isEditing) {
+            editingItemNameError.value = 'Item name is required. Please enter a name for the item.'
+        } else {
+            newItemNameError.value = 'Item name is required. Please enter a name for the item.'
+        }
+        hasErrors = true
+    }
+
+    return !hasErrors
+}
+
+function updateItemWithValidation() {
+    const isValid = validateItemInputs(
+        editingItem.value.name,
+        editingItem.value.quantity,
+        editingItem.value.category_id,
+        editingItem.value.price_per_unit,
+        true
+    )
+
+    if (isValid) {
+        updateItem(
+            editingItem.value.id,
+            editingItem.value.name,
+            editingItem.value.quantity,
+            editingItem.value.is_checked,
+            editingItem.value.category_id,
+            editingItem.value.is_favorite,
+            editingItem.value.price_per_unit
+        )
+    }
+}
 </script>
