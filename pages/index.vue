@@ -40,6 +40,7 @@
             <Alert class="mt-20 ml-100" :show="showFavoriteSuccess" message="List added to favorites!" type="success" />
             <Alert class="mt-20 ml-100" :show="showLastListDeleted"
                 message="Last list deleted. New list was created automatically." type="success" />
+            <Alert class="mt-20 ml-100" :show="showUpdatedListName" message="List name updated!" type="success" />
 
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
@@ -90,11 +91,14 @@
                 </div>
 
                 <div class="w-full max-w-[70vw] bg-base-200 rounded-lg p-4 shadow-md">
-                    <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name
+                    <p v-if="selectedListId !== 'all-favorite-items'" class="text-gray-400 text-sm mb-4">To change the
+                        name of the list, click on the list name
                         below
                         and
                         type
                         in the new name. It will be saved automatically.</p>
+                    <p v-else class="text-gray-400 text-sm mb-4">Name of this list can't be changed. All favorite items
+                        are stored in this list.</p>
                     <input v-if="selectedListId !== 'all-favorite-items'" type="text" v-model="selectedListName"
                         @blur="updateListName(selectedListId)"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
@@ -239,8 +243,7 @@
             </div>
             <div class="mb-8">
                 <p class="text-gray-400 text-sm mb-2">Item Name</p>
-                <input v-model="newItemName" placeholder="Item name" class="input input-boredered"
-                    @keydown.enter="addItem" @keydown.escape="showCreateItemPopup = false" />
+                <input v-model="newItemName" placeholder="Item name" class="input input-boredered"/>
                 <div v-if="newItemNameError" class="text-red-500 text-sm mt-1">
                     {{ newItemNameError }}
                 </div>
@@ -373,9 +376,7 @@ const editingItem = ref()
 // Creating item
 const newItemName = ref('')
 const newItemQuantity = ref(1)
-
 const newItemCategory = ref('')
-const editingItemCategory = ref('')
 const newItemIsFavorite = ref(false)
 const newItemPricePerUnit = ref(0)
 
@@ -387,6 +388,7 @@ const showDeleteItemSuccess = ref(false)
 const showAddItemSuccess = ref(false)
 const showFavoriteSuccess = ref(false)
 const showLastListDeleted = ref(false)
+const showUpdatedListName = ref(false)
 
 // other variables
 const updateItemLoading = ref(false)
@@ -770,11 +772,7 @@ function handleListClick(listId) {
 }
 
 
-// Cancel editing
-function cancelEditing() {
-    editingItemId.value = null;
-    editingName.value = '';
-}
+
 
 
 // Toggle item
@@ -790,7 +788,8 @@ function toggleItem(itemId) {
 async function updateListName(listId) {
     try {
         await updateList(listId, { name: selectedListName.value.trim() })
-        cancelEditing();
+        showUpdatedListName.value = true
+        setTimeout(() => showUpdatedListName.value = false, 3000)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -851,7 +850,11 @@ function searchListItems() {
     if (searchItem.length > 0) {
         selectedListItems.value = selectedListItems.value.filter(item => item.name.toLowerCase().includes(searchItem))
     } else {
-        selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+        if (selectedListId.value === 'all-favorite-items') {
+            selectedListItems.value = favoriteItemsList.value
+        } else {
+            selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+        }
         searchListItemInput.value = ''
     }
 }
@@ -1065,6 +1068,13 @@ function removeLocalListItems(itemId) {
     const listIndex = selectedListItems.value.findIndex(item => item.id === itemId)
     if (listIndex !== -1) {
         selectedListItems.value.splice(listIndex, 1)
+    }
+
+    for (const list of shoppingLists.value) {
+        const itemIndex = list.items.findIndex(item => item.id === itemId)
+        if (itemIndex !== -1) {
+            list.items.splice(itemIndex, 1)
+        }
     }
 }
 
