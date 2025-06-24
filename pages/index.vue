@@ -68,12 +68,22 @@
                         Priotize favorite items first
                     </button>
                 </div>
-              
-                <div class="flex gap-x-4 w-full max-w-6xl ml-7">
-                    <p class="text-gray-200 text-m mb-2">Total Items: {{ selectedListItems.length }}</p>
-                    <p class="text-gray-200 text-m mb-2">Items left to buy: {{ selectedListItems.filter(item =>
-                        !item.is_checked).length}}</p>
-                    <p class="text-gray-200 text-m mb-2">Total price: TODO</p>
+
+                <div class="flex gap-x-4 w-full max-w-6xl ml-7 space-x-23">
+                    <div>
+                        <p class="text-gray-200 text-m mb-2">Total Items: {{ selectedListItems.length }}</p>
+                        <p class="text-gray-200 text-m mb-2">Total price for all items: {{selectedListItems.reduce((acc,
+                            item) => acc + item.price_per_unit * item.quantity, 0)}} DKK</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-200 text-m mb-2">Items left to buy: {{selectedListItems.filter(item =>
+                            !item.is_checked).length}}</p>
+
+                        <p class="text-gray-200 text-m mb-2">Total price for items left to buy: {{
+                            selectedListItems.filter(item => !item.is_checked).reduce((acc, item) => acc +
+                                item.price_per_unit * item.quantity, 0)}} DKK</p>
+                    </div>
+
                 </div>
 
                 <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
@@ -94,6 +104,8 @@
                         <div class="flex-1 pl-6">Item name</div>
                         <div class="pr-9">Category</div>
                         <div class="pr-6">Quantity</div>
+                        <div class="pr-6">Price per unit</div>
+                        <div class="pr-6">Total price</div>
                         <div class="pr-41">Actions</div>
                     </div>
 
@@ -122,6 +134,12 @@
                                 {{ getCategoryName(item.category_id) }}
                             </div>
                             <div class="w-24 text-left pl-4">x{{ item.quantity }}</div>
+                            <div class="w-24 text-left pl-4">
+                                <p> {{ item.price_per_unit }} DKK</p>
+                            </div>
+                            <div class="w-24 text-left pl-4">
+                                <p> {{ item.price_per_unit * item.quantity }} DKK</p>
+                            </div>
                             <div class="w-32 flex justify-start">
                                 <button @click="deleteItem(item.id)"
                                     class="btn btn-ghost border-gray-300 border-2">Delete Item</button>
@@ -156,7 +174,7 @@
             <!-- ---------------------------------------------------- Today & Yesterday ---------------------------------------------------- -->
             <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in todayAndYesterday" :key="list.id" class="mb-2">
+                <li v-for="list in todayAndYesterdayLists" :key="list.id" class="mb-2">
                     <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
                         :class="{ 'border-white rounded-md': selectedListId === list.id }">
                         <p v-if="list.name.length < 30">
@@ -173,7 +191,7 @@
             <!-- ---------------------------------------------------- Older than 3 days ---------------------------------------------------- -->
             <h1 class="text-1xl ml-3 mb-2">Older than 3 days</h1>
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in olderList" :key="list.id">
+                <li v-for="list in olderLists" :key="list.id">
                     <a @click="handleListClick(list.id)"
                         :class="{ 'border-2 border-gray-300 rounded-md': selectedListId === list.id }">
                         <p v-if="list.name.length < 30">
@@ -191,7 +209,7 @@
             <h1 class="text-1xl ml-3 mb-2">Favorite lists</h1>
 
             <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in favoriteListWithAll" :key="list.id" class="mb-2">
+                <li v-for="list in favoriteListDefaultList" :key="list.id" class="mb-2">
                     <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
                         :class="{ 'border-white rounded-md': selectedListId === list.id }">
                         <p v-if="list.name.length < 30">
@@ -210,11 +228,11 @@
     <!-- ---------------------------------------------------- Create item popup ---------------------------------------------------- -->
     <div v-if="showCreateItemPopup" class="fixed inset-0 flex items-center justify-center">
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
-            <div class="mb-4">
+            <div class="mb-">
                 <h2 v-if="selectedListName.length < 30">Creating item for: {{ selectedListName }}</h2>
                 <h2 v-else>Creating item for: {{ selectedListName.slice(0, 30) + '...' }}</h2>
             </div>
-            <div class="mb-4">
+            <div class="mb-8">
                 <p class="text-gray-400 text-sm mb-2">Item Name</p>
                 <input v-model="newItemName" placeholder="Item name" class="input input-boredered"
                     @keydown.enter="addItem" @keydown.escape="showCreateItemPopup = false" />
@@ -240,6 +258,14 @@
                     min="1" max="100" class="input input-bordered" />
                 <div v-if="newItemQuantityError" class="text-red-500 text-sm mt-1">
                     {{ newItemQuantityError }}
+                </div>
+            </div>
+            <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Price per unit</p>
+                <input v-model="newItemPricePerUnit" type="number" placeholder="Price per unit"
+                    class="input input-bordered" step="0.01" min="0" />
+                <div v-if="newItemPricePerUnitError" class="text-red-500 text-sm mt-1">
+                    {{ newItemPricePerUnitError }}
                 </div>
             </div>
             <div class="mb-4">
@@ -296,6 +322,14 @@
                     {{ editingItemQuantityError }}
                 </div>
             </div>
+            <div class="mb-4">
+                <p class="text-gray-400 text-sm mb-2">Price per unit</p>
+                <input v-model="newItemPricePerUnit" type="number" placeholder="Price per unit"
+                    class="input input-bordered" step="0.01" min="0" />
+                <div v-if="newItemPricePerUnitError" class="text-red-500 text-sm mt-1">
+                    {{ newItemPricePerUnitError }}
+                </div>
+            </div>
             <div class="flex gap-x-4">
                 <button :disabled="updateItemLoading"
                     @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite)"
@@ -341,16 +375,16 @@ const newItemCategoryError = ref('')
 const newItemCategory = ref('')
 const editingItemCategory = ref('')
 const newItemIsFavorite = ref(false)
+const newItemPricePerUnit = ref(0)
 
 // Alerts
 const showDeleteSuccess = ref(false)
 const showCreateSuccess = ref(false)
-const editingItemQuantityError = ref('')
-const newItemNameError = ref('')
+
+
 const showCreateItemSuccess = ref(false)
 const showDeleteItemSuccess = ref(false)
 const showAddItemSuccess = ref(false)
-const generalError = ref(false)
 const showFavoriteSuccess = ref(false)
 const showLastListDeleted = ref(false)
 
@@ -364,9 +398,14 @@ const categories = ref([])
 const isFavorite = ref(null)
 const favoriteItemsList = ref([])
 
+// Errors
+const newItemPricePerUnitError = ref('')
+const newItemNameError = ref('')
+const generalError = ref(false)
+const editingItemQuantityError = ref('')
 
 // ---------------------------------------------------- computed properties functions ----------------------------------------------------
-const todayAndYesterday = computed(() => {
+const todayAndYesterdayLists = computed(() => {
     const now = new Date();
     // Get UTC timestamp for now
     const nowUTC = now.getTime() - now.getTimezoneOffset() * 60000;
@@ -383,7 +422,7 @@ const todayAndYesterday = computed(() => {
         }).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 })
 
-const olderList = computed(() => {
+const olderLists = computed(() => {
     const threeDaysAgo = new Date()
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
@@ -395,17 +434,17 @@ const olderList = computed(() => {
         .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 })
 
-const favoriteList = computed(() => {
+const favoriteLists = computed(() => {
     return shoppingLists.value.filter(list => list.is_favorite).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 })
 
-const favoriteListWithAll = computed(() => {
+const favoriteListDefaultList = computed(() => {
     const allFavoriteItems = {
         id: 'all-favorite-items',
         name: 'All Favorite Items',
         items: favoriteItemsList.value
     }
-    return [allFavoriteItems, ...favoriteList.value]
+    return [allFavoriteItems, ...favoriteLists.value]
 })
 
 
@@ -523,8 +562,8 @@ async function deleteList(id) {
 
         if (
             shoppingLists.value.length === 0 &&
-            olderList.value.length === 0 &&
-            favoriteList.value.length === 0
+            olderLists.value.length === 0 &&
+            favoriteLists.value.length === 0
         ) {
             await createNewList()
             showLastListDeleted.value = true
@@ -667,7 +706,8 @@ async function createNewItem() {
                 quantity: newItemQuantity.value,
                 shopping_list_id: selectedListId.value,
                 category_id: newItemCategory.value,
-                is_favorite: newItemIsFavorite.value
+                is_favorite: newItemIsFavorite.value,
+                price_per_unit: newItemPricePerUnit.value
             },
             credentials: 'include'
         })
@@ -684,6 +724,7 @@ async function createNewItem() {
         newItemIsFavorite.value = false
         showAddItemSuccess.value = true
         setTimeout(() => showAddItemSuccess.value = false, 3000)
+        handleFavoriteList()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -821,6 +862,17 @@ function addItem() {
         return
     }
 
+    if (isEmpty(newItemPricePerUnit.value)) {
+        newItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
+        return
+    }
+
+    const priceStr = newItemPricePerUnit.value.toString()
+    if (!/^\d+(\.\d{1,2})?$/.test(priceStr)) {
+        newItemPricePerUnitError.value = 'Price per unit can have maximum 2 decimal places.'
+        return
+    }
+
     if (isEmpty(newItemName.value)) {
         newItemNameError.value = 'Item name is required. Please enter a name for the item.'
         return
@@ -915,6 +967,10 @@ function handleFavoriteList() {
 
 function sortSelectedListItemsByCategory() {
     selectedListItems.value = selectedListItems.value.sort((a, b) => a.category_id - b.category_id)
+}
+
+function updateListItems() {
+    console.log(selectedListItems.value)
 }
 
 </script>
