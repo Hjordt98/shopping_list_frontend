@@ -7,7 +7,8 @@
             <!-- ---------------------------------------------------- Buttons ---------------------------------------------------- -->
             <div class="flex justify-between items-center p-6">
                 <div class="flex gap-x-4">
-                    <button @click="showCreateItemPopup = true" class="btn btn-ghost border-gray-300 border-2">
+                    <button @click="showCreateItemPopup = true, clearItemErrors()"
+                        class="btn btn-ghost border-gray-300 border-2">
                         Create New Item in selected list
                     </button>
 
@@ -277,7 +278,8 @@
             <div class="flex gap-x-4">
                 <button @keypress.enter="addItem" @click="addItem" class="btn btn-ghost border-gray-300 border-2">Add
                     item to list</button>
-                <button @click="showCreateItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Stop adding
+                <button @click="showCreateItemPopup = false, clearItemErrors()"
+                    class="btn btn-ghost border-gray-300 border-2">Stop adding
                     items to list</button>
             </div>
 
@@ -295,9 +297,11 @@
             </div>
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Item Name</p>
-                <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItemWithValidation"
+                <input @keydown.escape="showEditItemPopup = false" @keydown.enter="updateItemWithValidation"
                     v-model="editingItem.name" class="input input-boredered" />
+                <div v-if="editingItemNameError" class="text-red-500 text-sm mt-1">
+                    {{ editingItemNameError }}
+                </div>
             </div>
             <div>
                 <p class="text-gray-400 text-sm mb-2">Category</p>
@@ -314,8 +318,7 @@
             </div>
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Quantity (must be a whole number)</p>
-                <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItemWithValidation"
+                <input @keydown.escape="showEditItemPopup = false" @keydown.enter="updateItemWithValidation"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
                     min="1" max="100" class="input input-bordered" />
                 <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
@@ -331,10 +334,10 @@
                 </div>
             </div>
             <div class="flex gap-x-4">
-                <button :disabled="updateItemLoading"
-                    @click="updateItemWithValidation"
+                <button :disabled="updateItemLoading" @click="updateItemWithValidation"
                     class="btn btn-ghost border-gray-300 border-2">Update item</button>
-                <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
+                <button @click="showEditItemPopup = false, clearItemErrors()"
+                    class="btn btn-ghost border-gray-300 border-2">Cancel
                     editing item</button>
             </div>
         </div>
@@ -831,9 +834,8 @@ function addItem() {
 
 // Open edit item popup
 function openEditItemPopup(item) {
-    editingItem.value = item
+    editingItem.value = { ...item }
     showEditItemPopup.value = true
-    editingItemCategory.value = item.category_id
 }
 
 
@@ -1002,20 +1004,17 @@ async function checkIfListisEmpty() {
 }
 
 function validateItemInputs(name, quantity, category, pricePerUnit, isEditing = false) {
- 
-    if (isEditing) {
-        editingItemQuantityError.value = ''
-        editingItemCategoryError.value = ''
-        editingItemPricePerUnitError.value = ''
-        editingItemNameError.value = ''
-    } else {
-        newItemQuantityError.value = ''
-        newItemCategoryError.value = ''
-        newItemPricePerUnitError.value = ''
-        newItemNameError.value = ''
-    }
 
     let hasErrors = false
+
+    if (isEmpty(name) || name.trim() === '') {
+        if (isEditing) {
+            editingItemNameError.value = 'Item name is required. Please enter a name for the item.'
+        } else {
+            newItemNameError.value = 'Item name is required. Please enter a name for the item.'
+        }
+        hasErrors = true
+    }
 
     if (!isInteger(quantity)) {
         if (isEditing) {
@@ -1050,14 +1049,7 @@ function validateItemInputs(name, quantity, category, pricePerUnit, isEditing = 
         hasErrors = true
     }
 
-    if (isEmpty(name)) {
-        if (isEditing) {
-            editingItemNameError.value = 'Item name is required. Please enter a name for the item.'
-        } else {
-            newItemNameError.value = 'Item name is required. Please enter a name for the item.'
-        }
-        hasErrors = true
-    }
+
 
     return !hasErrors
 }
@@ -1089,5 +1081,16 @@ function removeLocalListItems(itemId) {
     if (listIndex !== -1) {
         selectedListItems.value.splice(listIndex, 1)
     }
+}
+
+function clearItemErrors() {
+    editingItemQuantityError.value = ''
+    editingItemCategoryError.value = ''
+    editingItemPricePerUnitError.value = ''
+    editingItemNameError.value = ''
+    newItemQuantityError.value = ''
+    newItemCategoryError.value = ''
+    newItemPricePerUnitError.value = ''
+    newItemNameError.value = ''
 }
 </script>
