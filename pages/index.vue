@@ -790,7 +790,7 @@ function cancelEditing() {
 function toggleItem(itemId) {
     const item = selectedListItems.value.find(item => item.id === itemId);
     if (item) {
-        updateItem(itemId, item.name, item.quantity, !item.is_checked, item.category_id, item.is_favorite);
+        updateItem(itemId, item.name, item.quantity, !item.is_checked, item.category_id, item.is_favorite, item.price_per_unit);
     }
 }
 
@@ -899,7 +899,7 @@ function filterListByCategory() {
 async function filterByFavoriteItemsFirst(itemId) {
     const item = selectedListItems.value.find(item => item.id === itemId);
     if (item) {
-        await updateItem(itemId, item.name, item.quantity, item.price_per_unit, item.is_checked, item.category_id, !item.is_favorite);
+        await updateItem(itemId, item.name, item.quantity, item.is_checked, item.category_id, !item.is_favorite, item.price_per_unit);
         handleFavoriteList()
     }
 }
