@@ -44,7 +44,8 @@
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
             <div class="flex flex-col items-center justify-center w-full mt-10 px-4 relative">
-                <p class="text-gray-400 text-sm mb-4 text-left w-full max-w-6xl ml-6">Search for an item by writing in
+                <p class="text-gray-400 text-sm mb-4 text-left w-full max-w-6xl ml-6">Search for an item by writing
+                    in
                     the search bar. Or filter by category by selecting a category from the dropdown menu.</p>
                 <div class="flex gap-x-4 w-full max-w-6xl ml-7">
                     <label class="input">
@@ -73,8 +74,9 @@
                 <div class="flex gap-x-4 w-full max-w-6xl ml-7 space-x-23">
                     <div>
                         <p class="text-gray-200 text-m mb-2">Total Items: {{ selectedListItems.length }}</p>
-                        <p class="text-gray-200 text-m mb-2">Total price for all items: {{selectedListItems.reduce((acc,
-                            item) => acc + item.price_per_unit * item.quantity, 0)}} DKK</p>
+                        <p class="text-gray-200 text-m mb-2">Total price for all items:
+                            {{selectedListItems.reduce((acc,
+                                item) => acc + item.price_per_unit * item.quantity, 0)}} DKK</p>
                     </div>
                     <div>
                         <p class="text-gray-200 text-m mb-2">Items left to buy: {{selectedListItems.filter(item =>
@@ -87,27 +89,29 @@
 
                 </div>
 
-                <div class="w-full max-w-6xl bg-base-200 rounded-lg p-4 shadow-md">
-                    <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name below
+                <div class="w-full max-w-[70vw] bg-base-200 rounded-lg p-4 shadow-md">
+                    <p class="text-gray-400 text-sm mb-4">To change the name of the list, click on the list name
+                        below
                         and
                         type
                         in the new name. It will be saved automatically.</p>
                     <input v-if="selectedListId !== 'all-favorite-items'" type="text" v-model="selectedListName"
                         @blur="updateListName(selectedListId)"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
-                    <h2 v-else class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">All Favorite Items
+                    <h2 v-else class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">All Favorite
+                        Items
                     </h2>
 
                     <!-- ---------------------------------------------------- Header row for items ----------------------------------------------- -->
                     <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
                         <div class="w-20">Favorite</div>
-                        <div class="w-20 ">Bought</div>
+                        <div class="w-20">Bought</div>
                         <div class="flex-1 pl-6">Item name</div>
-                        <div class="pr-9">Category</div>
-                        <div class="pr-6">Quantity</div>
-                        <div class="pr-6">Price per unit</div>
-                        <div class="pr-6">Total price</div>
-                        <div class="pr-41">Actions</div>
+                        <div class="w-32">Category</div>
+                        <div class="w-24">Quantity</div>
+                        <div class="w-32">Price per unit</div>
+                        <div class="w-32">Total price</div>
+                        <div class="w-48">Actions</div>
                     </div>
 
 
@@ -131,14 +135,14 @@
                                     {{ item.name.slice(0, 70) + '...' }}
                                 </p>
                             </div>
-                            <div class="w-24 text-left pl-4 pr-22">
+                            <div class="w-24 pr-32.5">
                                 {{ getCategoryName(item.category_id) }}
                             </div>
-                            <div class="w-24 text-left pl-4">x{{ item.quantity }}</div>
-                            <div class="w-24 text-left pl-4">
+                            <div class="w-24 text-left pr-20">x{{ item.quantity }}</div>
+                            <div class="text-left pr-10">
                                 <p> {{ item.price_per_unit }} DKK</p>
                             </div>
-                            <div class="w-24 text-left pl-4">
+                            <div class="w-30 pl-6">
                                 <p> {{ item.price_per_unit * item.quantity }} DKK</p>
                             </div>
                             <div class="w-32 flex justify-start">
