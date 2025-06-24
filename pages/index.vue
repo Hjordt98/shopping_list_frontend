@@ -587,7 +587,7 @@ async function deleteItem(itemId) {
             credentials: 'include'
         })
         // Update the local list with the new items
-        updateLocalListItems(itemId, '', '', '', '')
+        removeLocalListItems(itemId)
         showDeleteItemSuccess.value = true
         setTimeout(() => showDeleteItemSuccess.value = false, 3000)
     } catch (error) {
@@ -1081,6 +1081,13 @@ function updateItemWithValidation() {
             editingItem.value.is_favorite,
             editingItem.value.price_per_unit
         )
+    }
+}
+
+function removeLocalListItems(itemId) {
+    const listIndex = selectedListItems.value.findIndex(item => item.id === itemId)
+    if (listIndex !== -1) {
+        selectedListItems.value.splice(listIndex, 1)
     }
 }
 </script>
