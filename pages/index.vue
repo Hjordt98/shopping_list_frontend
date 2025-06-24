@@ -16,7 +16,7 @@
                         class="btn btn-ghost border-gray-300 border-2">
                         Delete selected list
                     </button>
-                    <button v-if="selectedListId !== 'all-favorite-items'" @click="FavoriteList(selectedListId)"
+                    <button v-if="selectedListId !== 'all-favorite-items'" @click="addListToFavorites(selectedListId)"
                         class="btn btn-ghost border-gray-300 border-2">
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
@@ -375,7 +375,7 @@ const editingItemCategory = ref('')
 const newItemIsFavorite = ref(false)
 const newItemPricePerUnit = ref(0)
 
-// Alerts
+// success alerts
 const showDeleteSuccess = ref(false)
 const showCreateSuccess = ref(false)
 const showCreateItemSuccess = ref(false)
@@ -384,7 +384,7 @@ const showAddItemSuccess = ref(false)
 const showFavoriteSuccess = ref(false)
 const showLastListDeleted = ref(false)
 
-// other
+// other variables
 const updateItemLoading = ref(false)
 const searchListItemInput = ref('')
 const filterListInput = ref('')
@@ -395,15 +395,12 @@ const isFavorite = ref(null)
 const favoriteItemsList = ref([])
 const showEditItemPopup = ref(false)
 
-// Errors
+// Errors alerts
 const generalError = ref(false)
-
-
 const newItemPricePerUnitError = ref('')
 const newItemNameError = ref('')
 const newItemQuantityError = ref('')
 const newItemCategoryError = ref('')
-
 const editingItemQuantityError = ref('')
 const editingItemCategoryError = ref('')
 const editingItemPricePerUnitError = ref('')
@@ -456,7 +453,6 @@ const favoriteListDefaultList = computed(() => {
 
 // ---------------------------------------------------- misc ----------------------------------------------------
 const debouncedSaveList = useDebounceFn(async () => {
-    if (!selectedListId.value) return;
     try {
         const xsrfToken = await getCsrfToken();
 
@@ -472,15 +468,8 @@ const debouncedSaveList = useDebounceFn(async () => {
             },
             credentials: 'include'
         });
-        // Update the local list with the new text so UI stays in sync
-        const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
-        if (listIndex !== -1) {
-            shoppingLists.value[listIndex].text = textareaValue.value
-            shoppingLists.value[listIndex].name = selectedListName.value
-            // Move the updated list to the top
-            const [updatedList] = shoppingLists.value.splice(listIndex, 1)
-            shoppingLists.value.unshift(updatedList)
-        }
+        updateSelectedListName()
+
     } catch (error) {
         console.error('Error updating list:', error)
     }
@@ -719,7 +708,7 @@ async function getCategories() {
 
 
 // update list favorite
-async function updateListFavorite(listId) {
+async function favoriteList(listId) {
     try {
         const xsrfToken = await getCsrfToken();
 
@@ -731,19 +720,11 @@ async function updateListFavorite(listId) {
                 'X-XSRF-TOKEN': xsrfToken
             },
             body: {
-                favorite: isFavorite.value
+                favorite: !isFavorite.value
             },
             credentials: 'include'
         })
-        const listIndex = shoppingLists.value.findIndex(list => list.id === listId)
-        if (listIndex !== -1) {
-            // First set the favorite status in the shopping lists array to keep data in sync
-            shoppingLists.value[listIndex].favorite = isFavorite.value
-            // Then set isFavorite to match the array value to ensure UI state matches data
-            // This double assignment helps prevent any edge cases where the values could get out of sync
-            isFavorite.value = shoppingLists.value[listIndex].favorite
-            window.location.reload()
-        }
+        flipFavoriteStatus(listId)
         showFavoriteSuccess.value = true
         setTimeout(() => showFavoriteSuccess.value = false, 3000)
     } catch (error) {
@@ -1092,5 +1073,25 @@ function clearItemErrors() {
     newItemCategoryError.value = ''
     newItemPricePerUnitError.value = ''
     newItemNameError.value = ''
+}
+
+
+function updateSelectedListName() {
+    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+    if (listIndex !== -1) {
+        shoppingLists.value[listIndex].name = selectedListName.value
+        const [updatedList] = shoppingLists.value.splice(listIndex, 1)
+        shoppingLists.value.unshift(updatedList)
+    }
+}
+
+function addListToFavorites(listId) {
+    favoriteList(listId)
+}
+
+function flipFavoriteStatus(listId) {
+    const listIndex = shoppingLists.value.findIndex(list => list.id === listId)
+    shoppingLists.value[listIndex].is_favorite = !isFavorite.value
+    isFavorite.value = !isFavorite.value
 }
 </script>
