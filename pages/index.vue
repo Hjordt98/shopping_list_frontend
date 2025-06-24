@@ -296,7 +296,7 @@
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Item Name</p>
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite)"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite, editingItemPricePerUnit)"
                     v-model="editingItem.name" class="input input-boredered" />
             </div>
             <div>
@@ -315,7 +315,7 @@
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Quantity (must be a whole number)</p>
                 <input @keydown.escape="showEditItemPopup = false"
-                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite)"
+                    @keydown.enter="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite, editingItemPricePerUnit)"
                     v-model="editingItem.quantity" type="number" placeholder="Quantity, must be a whole number" step="1"
                     min="1" max="100" class="input input-bordered" />
                 <div v-if="editingItemQuantityError" class="text-red-500 text-sm mt-1">
@@ -324,15 +324,15 @@
             </div>
             <div class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Price per unit</p>
-                <input v-model="newItemPricePerUnit" type="number" placeholder="Price per unit"
+                <input v-model="editingItemPricePerUnit" type="number" placeholder="Price per unit"
                     class="input input-bordered" step="0.01" min="0" />
-                <div v-if="newItemPricePerUnitError" class="text-red-500 text-sm mt-1">
-                    {{ newItemPricePerUnitError }}
-                </div>
+                <!-- <div v-if="editingItemPricePerUnitError" class="text-red-500 text-sm mt-1">
+                    {{ editingItemPricePerUnitError }}
+                </div> -->
             </div>
             <div class="flex gap-x-4">
                 <button :disabled="updateItemLoading"
-                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite)"
+                    @click="updateItem(editingItem.id, editingItem.name, editingItem.quantity, editingItem.is_checked, editingItemCategory, editingItem.is_favorite, editingItemPricePerUnit)"
                     class="btn btn-ghost border-gray-300 border-2">Update item</button>
                 <button @click="showEditItemPopup = false" class="btn btn-ghost border-gray-300 border-2">Cancel
                     editing item</button>
@@ -366,6 +366,8 @@ const editingName = ref('')
 const editingItemCategoryError = ref('')
 const showEditItemPopup = ref(false)
 const editingItem = ref()
+const editingItemPricePerUnit = ref(0)
+
 
 // Creating item
 const newItemName = ref('')
@@ -380,8 +382,6 @@ const newItemPricePerUnit = ref(0)
 // Alerts
 const showDeleteSuccess = ref(false)
 const showCreateSuccess = ref(false)
-
-
 const showCreateItemSuccess = ref(false)
 const showDeleteItemSuccess = ref(false)
 const showAddItemSuccess = ref(false)
@@ -501,7 +501,7 @@ onMounted(async () => {
             createNewList()
         }
         shoppingLists.value = response
-        shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        sortShoppingLists()
         handleListClick(shoppingLists.value[0].id)
         getCategories()
         handleFavoriteList()
@@ -531,9 +531,11 @@ async function createNewList() {
             credentials: 'include'
         });
 
-        shoppingLists.value.push(newList)
-        showCreateSuccess.value = true
+        updateLocalShoppingListsWithNewList(newList)  
+
         handleListClick(newList.id)
+
+        showCreateSuccess.value = true
         setTimeout(() => showCreateSuccess.value = false, 3000) // Hide after 3 seconds
 
     } catch (error) {
@@ -556,22 +558,11 @@ async function deleteList(id) {
             },
             credentials: 'include'
         });
-        shoppingLists.value = shoppingLists.value.filter(list => list.id !== id)
+        updateLocalShoppingListsWithDeletedList(id)
         selectedListId.value = null
-        shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        sortShoppingLists()
 
-        if (
-            shoppingLists.value.length === 0 &&
-            olderLists.value.length === 0 &&
-            favoriteLists.value.length === 0
-        ) {
-            await createNewList()
-            showLastListDeleted.value = true
-            setTimeout(() => showLastListDeleted.value = false, 3000)
-        } else if (shoppingLists.value.length > 0) {
-            showDeleteSuccess.value = true
-            setTimeout(() => showDeleteSuccess.value = false, 3000)
-        }
+        checkIfListisEmpty()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -593,7 +584,7 @@ async function deleteItem(itemId) {
             credentials: 'include'
         })
         // Update the local list with the new items
-        selectedListItems.value = selectedListItems.value.filter(item => item.id !== itemId)
+        updateLocalListItems(itemId, '', '', '', '')
         showDeleteItemSuccess.value = true
         setTimeout(() => showDeleteItemSuccess.value = false, 3000)
     } catch (error) {
@@ -603,7 +594,7 @@ async function deleteItem(itemId) {
 }
 
 // function to toggle item
-async function updateItem(itemId, name, quantity, is_checked, category_id, is_favorite) {
+async function updateItem(itemId, name, quantity, is_checked, category_id, is_favorite, editingItemPricePerUnit) {
     try {
         const xsrfToken = await getCsrfToken();
 
@@ -620,40 +611,20 @@ async function updateItem(itemId, name, quantity, is_checked, category_id, is_fa
                 quantity: quantity,
                 is_checked: is_checked,
                 category_id: category_id,
-                is_favorite: is_favorite
+                is_favorite: is_favorite,
+                price_per_unit: editingItemPricePerUnit
             },
             credentials: 'include'
         });
 
-        // Update local state in selectedListItems
-        const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
-        if (itemIndex !== -1) {
-            selectedListItems.value[itemIndex] = {
-                ...selectedListItems.value[itemIndex],
-                name: name,
-                quantity: quantity,
-                category_id: category_id,
-                is_favorite: is_favorite
-            };
-        }
+        updateLocalListItems(itemId, name, quantity, category_id, is_favorite, editingItemPricePerUnit)
 
-        // Update the item in the main shoppingLists array
-        for (const list of shoppingLists.value) {
-            const idx = list.items.findIndex(item => item.id === itemId);
-            if (idx !== -1) {
-                list.items[idx] = {
-                    ...list.items[idx],
-                    name: name,
-                    quantity: quantity,
-                    category_id: category_id,
-                    is_checked: is_checked,
-                    is_favorite: is_favorite
-                };
-                break;
-            }
-        }
+        updateLocalShoppingLists(itemId, name, quantity, category_id, is_checked, is_favorite)
+
         sortSelectedListItemsByCategory()
+        
         handleFavoriteList();
+
         showCreateItemSuccess.value = true;
         showEditItemPopup.value = false;
         setTimeout(() => showCreateItemSuccess.value = false, 3000);
@@ -679,11 +650,7 @@ async function updateList(listId, updates) {
             credentials: 'include'
         });
 
-        // Update local state
-        const listIndex = shoppingLists.value.findIndex(list => list.id === listId);
-        if (listIndex !== -1) {
-            shoppingLists.value[listIndex] = { ...shoppingLists.value[listIndex], ...updates };
-        }
+        updateLocalShoppingListsWithUpdatedList(listId, updates)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -711,17 +678,9 @@ async function createNewItem() {
             },
             credentials: 'include'
         })
-        //updaet the local list with the new item
-        const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
-        if (listIndex !== -1) {
-            shoppingLists.value[listIndex].items.push(newItem)
-        }
+        updateLocalShoppingListsWithNewItem(newItem)
 
-        //clear the form
-        newItemName.value = ''
-        newItemQuantity.value = ''
-        newItemCategory.value = ''
-        newItemIsFavorite.value = false
+        clearForm()
         showAddItemSuccess.value = true
         setTimeout(() => showAddItemSuccess.value = false, 3000)
         handleFavoriteList()
@@ -940,7 +899,7 @@ function filterListByCategory() {
 async function filterByFavoriteItemsFirst(itemId) {
     const item = selectedListItems.value.find(item => item.id === itemId);
     if (item) {
-        await updateItem(itemId, item.name, item.quantity, item.is_checked, item.category_id, !item.is_favorite);
+        await updateItem(itemId, item.name, item.quantity, item.price_per_unit, item.is_checked, item.category_id, !item.is_favorite);
         handleFavoriteList()
     }
 }
@@ -969,8 +928,91 @@ function sortSelectedListItemsByCategory() {
     selectedListItems.value = selectedListItems.value.sort((a, b) => a.category_id - b.category_id)
 }
 
-function updateListItems() {
-    console.log(selectedListItems.value)
+function updateLocalListItems(itemId, name, quantity, category_id, is_favorite, price_per_unit) {
+
+    // Update local state in selectedListItems
+    const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1) {
+        selectedListItems.value[itemIndex] = {
+            ...selectedListItems.value[itemIndex],
+            name: name,
+            quantity: quantity,
+            category_id: category_id,
+            is_favorite: is_favorite,
+            price_per_unit: price_per_unit
+        };
+    }
 }
+
+function updateLocalShoppingLists(itemId, name, quantity, category_id, is_checked, is_favorite) {
+
+    // Update the item in the main shoppingLists array
+    for (const list of shoppingLists.value) {
+        const idx = list.items.findIndex(item => item.id === itemId);
+        if (idx !== -1) {
+            list.items[idx] = {
+                ...list.items[idx],
+                name: name,
+                quantity: quantity,
+                category_id: category_id,
+                is_checked: is_checked,
+                is_favorite: is_favorite
+            };
+            break;
+        }
+    }
+}
+
+function clearForm() {
+    newItemName.value = ''
+    newItemQuantity.value = ''
+    newItemCategory.value = ''
+    newItemIsFavorite.value = false
+    newItemPricePerUnit.value = ''
+}
+
+function updateLocalShoppingListsWithNewItem(newItem) {
+    //updaet the local list with the new item
+    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+    if (listIndex !== -1) {
+        shoppingLists.value[listIndex].items.push(newItem)
+    }
+}
+
+function updateLocalShoppingListsWithNewList(newList) {
+    shoppingLists.value.push(newList)
+}
+
+function updateLocalShoppingListsWithUpdatedList(listId, updates) {
+    // Update local state
+    const listIndex = shoppingLists.value.findIndex(list => list.id === listId);
+    if (listIndex !== -1) {
+        shoppingLists.value[listIndex] = { ...shoppingLists.value[listIndex], ...updates };
+    }
+}
+
+function updateLocalShoppingListsWithDeletedList(listId) {
+    shoppingLists.value = shoppingLists.value.filter(list => list.id !== listId)
+}
+
+function sortShoppingLists() {
+    shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+}
+
+async function checkIfListisEmpty() {
+    if (
+            shoppingLists.value.length === 0 &&
+            olderLists.value.length === 0 &&
+            favoriteLists.value.length === 0
+        ) {
+            await createNewList()
+            showLastListDeleted.value = true
+            setTimeout(() => showLastListDeleted.value = false, 3000)
+        } else if (shoppingLists.value.length > 0) {
+            showDeleteSuccess.value = true
+            setTimeout(() => showDeleteSuccess.value = false, 3000)
+        }
+}
+
 
 </script>
