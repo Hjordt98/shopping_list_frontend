@@ -20,6 +20,10 @@
                         class="btn btn-ghost border-gray-300 border-2">
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
+                    <button v-if="selectedListId !== 'all-favorite-items'" @click="showShareThisListPopup = true"
+                        class="btn btn-ghost border-gray-300 border-2">
+                        Manage collaborators
+                    </button>
                 </div>
                 <div>
                     <button @click="handleSignOut" class="btn btn-ghost border-gray-300 border-2">
@@ -41,6 +45,7 @@
             <Alert class="mt-20 ml-100" :show="showLastListDeleted"
                 message="Last list deleted. New list was created automatically." type="success" />
             <Alert class="mt-20 ml-100" :show="showUpdatedListName" message="List name updated!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showSharedListSuccess" message="List shared successfully!" type="success" />
 
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
@@ -243,7 +248,7 @@
             </div>
             <div class="mb-8">
                 <p class="text-gray-400 text-sm mb-2">Item Name</p>
-                <input v-model="newItemName" placeholder="Item name" class="input input-boredered"/>
+                <input v-model="newItemName" placeholder="Item name" class="input input-boredered" />
                 <div v-if="newItemNameError" class="text-red-500 text-sm mt-1">
                     {{ newItemNameError }}
                 </div>
@@ -289,10 +294,24 @@
                     class="btn btn-ghost border-gray-300 border-2">Stop adding
                     items to list</button>
             </div>
-
         </div>
-        <div class="fixed inset-0 bg-black opacity-50 z-[9998]" @click="showCreateItemPopup = false"></div>
     </div>
+
+    <!-- ---------------------------------------------------- Share this list popup ---------------------------------------------------- -->
+
+    <div v-if="showShareThisListPopup" class="fixed inset-0 flex items-center justify-center">
+        <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
+            <h2 class="text-gray-400 text-sm mb-2">IMPORTANT! You are about to share this list with another user and grant them access to this list.</h2>
+            <input type="text" v-model="collaboratorEmail" placeholder="Enter email of the user you want to share this list with" class="input input-bordered w-full" />
+            <div class="flex gap-x-4 mt-4">
+                <button @click="shareList" class="btn btn-ghost border-gray-300 border-2">Share list</button>
+                <button @click="showShareThisListPopup = false" class="btn btn-ghost border-gray-300 border-2">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+
 
 
     <!-- ---------------------------------------------------- Edit item popup ---------------------------------------------------- -->
@@ -389,6 +408,7 @@ const showAddItemSuccess = ref(false)
 const showFavoriteSuccess = ref(false)
 const showLastListDeleted = ref(false)
 const showUpdatedListName = ref(false)
+const showSharedListSuccess = ref(false)
 
 // other variables
 const updateItemLoading = ref(false)
@@ -400,6 +420,8 @@ const categories = ref([])
 const isFavorite = ref(null)
 const favoriteItemsList = ref([])
 const showEditItemPopup = ref(false)
+const showShareThisListPopup = ref(false)
+const collaboratorEmail = ref('')
 
 // Errors alerts
 const generalError = ref(false)
@@ -733,6 +755,32 @@ async function favoriteList(listId) {
         flipFavoriteStatus(listId)
         showFavoriteSuccess.value = true
         setTimeout(() => showFavoriteSuccess.value = false, 3000)
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
+async function shareList() {
+    try {
+        const xsrfToken = await getCsrfToken();
+        
+        await $fetch(`http://localhost:8000/api/shared-lists/add-collaborator/${selectedListId.value}`,{
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            body: {
+                collaborator_email: collaboratorEmail.value
+            },
+            credentials: 'include'
+        })
+
+        showSharedListSuccess.value = true
+        setTimeout(() => showSharedListSuccess.value = false, 3000)
+       
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
