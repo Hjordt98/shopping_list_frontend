@@ -20,7 +20,8 @@
                         class="btn btn-ghost border-gray-300 border-2">
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
-                    <button v-if="selectedListId !== 'all-favorite-items'" @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId)"
+                    <button v-if="selectedListId !== 'all-favorite-items'"
+                        @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId)"
                         class="btn btn-ghost border-gray-300 border-2">
                         Manage collaborators
                     </button>
@@ -45,8 +46,10 @@
             <Alert class="mt-20 ml-100" :show="showLastListDeleted"
                 message="Last list deleted. New list was created automatically." type="success" />
             <Alert class="mt-20 ml-100" :show="showUpdatedListName" message="List name updated!" type="success" />
-            <Alert class="mt-20 ml-100" :show="showSharedListSuccess" message="List shared successfully!" type="success" />
-            <Alert class="mt-20 ml-100" :show="showRemoveCollaboratorSuccess" message="Collaborator removed successfully!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showSharedListSuccess" message="List shared successfully!"
+                type="success" />
+            <Alert class="mt-20 ml-100" :show="showRemoveCollaboratorSuccess"
+                message="Collaborator removed successfully!" type="success" />
 
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
@@ -106,7 +109,7 @@
                     <p v-else class="text-gray-400 text-sm mb-4">Name of this list can't be changed. All favorite items
                         are stored in this list.</p>
                     <input v-if="selectedListId !== 'all-favorite-items'" type="text" v-model="selectedListName"
-                        @blur="updateListName(selectedListId)"
+                        @blur="updateListName(selectedListId)" @keydown.enter="updateListName(selectedListId)"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
                     <h2 v-else class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">All Favorite
                         Items
@@ -153,7 +156,7 @@
                                 <p> {{ item.price_per_unit }} DKK</p>
                             </div>
                             <div class="w-30 pl-6">
-                                <p> {{ item.price_per_unit * item.quantity }} DKK</p>
+                                <p> {{ (item.price_per_unit * item.quantity).toFixed(2) }} DKK</p>
                             </div>
                             <div class="w-32 flex justify-start">
                                 <button @click="deleteItem(item.id)"
@@ -236,6 +239,19 @@
                     </a>
                 </li>
             </ul>
+
+            <!-- ---------------------------------------------------- Shared lists ---------------------------------------------------- -->
+            <h1 class="text-1xl ml-3 mb-2">Shared lists</h1>
+            <ul class="menu bg-base-200 text-base-content w-80 p-4">
+                <li v-for="list in sharedLists" :key="list.id">
+                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                        :class="{ 'border-white rounded-md': selectedListId === list.id }">
+                        <p v-if="list.shopping_list && list.shopping_list.name">
+                            {{ list.shopping_list.name.length < 30 ? list.shopping_list.name : list.shopping_list.name.slice(0, 30) + '...' }}
+                        </p>
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
 
@@ -303,18 +319,25 @@
     <div v-if="showShareThisListPopup" class="fixed inset-0 flex items-center justify-center">
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
             <h2 class="text-gray-400 text-sm mb-2">IMPORTANT! Only share this list with users you trust.</h2>
-            <h2 class="text-gray-400 text-sm mb-2">Add a collaborator: Enter the email of a user. Then click "Share list" to share this list with them.</h2>
-            <h2 class="text-gray-400 text-sm mb-2">Remove a collaborator: Enter the email of a user. Then click "Remove collaborator" to remove them from this list.</h2>
-            <input type="text" v-model="collaboratorEmail" placeholder="Enter user email" class="input input-bordered w-full" />
+            <h2 class="text-gray-400 text-sm mb-2">Add a collaborator: Enter the email of a user. Then click "Share
+                list" to share this list with them.</h2>
+            <h2 class="text-gray-400 text-sm mb-2">Remove a collaborator: Enter the email of a user. Then click "Remove
+                collaborator" to remove them from this list.</h2>
+            <input type="text" v-model="collaboratorEmail" placeholder="Enter user email"
+                class="input input-bordered w-full" />
             <div class="flex gap-x-4 mt-4">
-                <button @click="addCollaborator" class="btn btn-ghost border-gray-300 border-2">Add collaborator</button>
-                <button @click="removeCollaborator" class="btn btn-ghost border-gray-300 border-2">Remove collaborator</button>
-                <button @click="showShareThisListPopup = false" class="btn btn-ghost border-gray-300 border-2">Close</button>
+                <button @click="addCollaborator" class="btn btn-ghost border-gray-300 border-2">Add
+                    collaborator</button>
+                <button @click="removeCollaborator" class="btn btn-ghost border-gray-300 border-2">Remove
+                    collaborator</button>
+                <button @click="showShareThisListPopup = false"
+                    class="btn btn-ghost border-gray-300 border-2">Close</button>
             </div>
             <div class="mb-4" v-if="collaborators.length > 0">
                 <h2 class="text-gray-400 text-sm mb-2 mt-4">Collaborators on this list</h2>
                 <ul class="list-disc list-inside">
-                    <li class="text-gray-200 text-m mb-2" v-for="collaborator in collaborators" :key="collaborator.email">
+                    <li class="text-gray-200 text-m mb-2" v-for="collaborator in collaborators"
+                        :key="collaborator.email">
                         {{ collaborator.email }}
                     </li>
                 </ul>
@@ -439,6 +462,7 @@ const showShareThisListPopup = ref(false)
 const collaboratorEmail = ref('')
 const collaborators = ref([])
 const showRemoveCollaboratorSuccess = ref(false)
+const sharedLists = ref([])
 
 // Errors alerts
 const generalError = ref(false)
@@ -545,6 +569,7 @@ onMounted(async () => {
         handleListClick(shoppingLists.value[0].id)
         getCategories()
         handleFavoriteList()
+        getSharedLists()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -799,8 +824,8 @@ async function favoriteList(listId) {
 async function addCollaborator() {
     try {
         const xsrfToken = await getCsrfToken();
-        
-        await $fetch(`http://localhost:8000/api/shared-lists/add-collaborator/${selectedListId.value}`,{
+
+        await $fetch(`http://localhost:8000/api/shared-lists/add-collaborator/${selectedListId.value}`, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -815,7 +840,7 @@ async function addCollaborator() {
         addLocalCollaborators(collaboratorEmail.value)
         showSharedListSuccess.value = true
         setTimeout(() => showSharedListSuccess.value = false, 3000)
-       
+
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -839,6 +864,25 @@ async function removeCollaborator() {
         removeLocalCollaborators(collaboratorEmail.value)
         showRemoveCollaboratorSuccess.value = true
         setTimeout(() => showRemoveCollaboratorSuccess.value = false, 3000)
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
+async function getSharedLists() {
+    try {
+        const xsrfToken = await getCsrfToken();
+
+        const response = await $fetch('http://localhost:8000/api/shared-lists', {
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        })
+        sharedLists.value = response
+        //console.log(sharedLists.value)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -1220,7 +1264,7 @@ function flipFavoriteStatus(listId) {
 function addLocalCollaborators(email) {
     const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
     if (listIndex !== -1) {
-        collaborators.value.push({email: email})
+        collaborators.value.push({ email: email })
     }
 }
 
