@@ -32,6 +32,7 @@
                     </button>
                 </div>
             </div>
+            <p class="text-gray-400 text-left ml-6">you are logged in as: {{ loggedInUserEmail }}</p>
 
 
             <!-- ---------------------------------------------------- Alerts ---------------------------------------------------- -->
@@ -463,6 +464,7 @@ const collaboratorEmail = ref('')
 const collaborators = ref([])
 const showRemoveCollaboratorSuccess = ref(false)
 const sharedLists = ref([])
+const loggedInUserEmail = ref('')
 
 // Errors alerts
 const generalError = ref(false)
@@ -570,6 +572,7 @@ onMounted(async () => {
         getCategories()
         handleFavoriteList()
         getSharedLists()
+        getLoggedInUser()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -883,6 +886,23 @@ async function getSharedLists() {
         })
         sharedLists.value = response
         //console.log(sharedLists.value)
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
+async function getLoggedInUser() {
+    try {
+        const xsrfToken = await getCsrfToken();
+        const response = await $fetch('http://localhost:8000/api/user', {
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        })
+        loggedInUserEmail.value = response.email
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
