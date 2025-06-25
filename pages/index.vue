@@ -20,7 +20,7 @@
                         class="btn btn-ghost border-gray-300 border-2">
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
-                    <button v-if="selectedListId !== 'all-favorite-items'" @click="showShareThisListPopup = true"
+                    <button v-if="selectedListId !== 'all-favorite-items'" @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId)"
                         class="btn btn-ghost border-gray-300 border-2">
                         Manage collaborators
                     </button>
@@ -46,6 +46,7 @@
                 message="Last list deleted. New list was created automatically." type="success" />
             <Alert class="mt-20 ml-100" :show="showUpdatedListName" message="List name updated!" type="success" />
             <Alert class="mt-20 ml-100" :show="showSharedListSuccess" message="List shared successfully!" type="success" />
+            <Alert class="mt-20 ml-100" :show="showRemoveCollaboratorSuccess" message="Collaborator removed successfully!" type="success" />
 
 
             <!-- ---------------------------------------------------- List items ---------------------------------------------------- -->
@@ -82,7 +83,7 @@
                         <p class="text-gray-200 text-m mb-2">Total Items: {{ selectedListItems.length }}</p>
                         <p class="text-gray-200 text-m mb-2">Total price for all items:
                             {{selectedListItems.reduce((acc,
-                                item) => acc + item.price_per_unit * item.quantity, 0)}} DKK</p>
+                                item) => acc + item.price_per_unit * item.quantity, 0).toFixed(2)}} DKK</p>
                     </div>
                     <div>
                         <p class="text-gray-200 text-m mb-2">Items left to buy: {{selectedListItems.filter(item =>
@@ -90,7 +91,7 @@
 
                         <p class="text-gray-200 text-m mb-2">Total price for items left to buy: {{
                             selectedListItems.filter(item => !item.is_checked).reduce((acc, item) => acc +
-                                item.price_per_unit * item.quantity, 0)}} DKK</p>
+                                item.price_per_unit * item.quantity, 0).toFixed(2)}} DKK</p>
                     </div>
 
                 </div>
@@ -301,11 +302,25 @@
 
     <div v-if="showShareThisListPopup" class="fixed inset-0 flex items-center justify-center">
         <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
-            <h2 class="text-gray-400 text-sm mb-2">IMPORTANT! You are about to share this list with another user and grant them access to this list.</h2>
-            <input type="text" v-model="collaboratorEmail" placeholder="Enter email of the user you want to share this list with" class="input input-bordered w-full" />
+            <h2 class="text-gray-400 text-sm mb-2">IMPORTANT! Only share this list with users you trust.</h2>
+            <h2 class="text-gray-400 text-sm mb-2">Add a collaborator: Enter the email of a user. Then click "Share list" to share this list with them.</h2>
+            <h2 class="text-gray-400 text-sm mb-2">Remove a collaborator: Enter the email of a user. Then click "Remove collaborator" to remove them from this list.</h2>
+            <input type="text" v-model="collaboratorEmail" placeholder="Enter user email" class="input input-bordered w-full" />
             <div class="flex gap-x-4 mt-4">
-                <button @click="shareList" class="btn btn-ghost border-gray-300 border-2">Share list</button>
+                <button @click="addCollaborator" class="btn btn-ghost border-gray-300 border-2">Add collaborator</button>
+                <button @click="removeCollaborator" class="btn btn-ghost border-gray-300 border-2">Remove collaborator</button>
                 <button @click="showShareThisListPopup = false" class="btn btn-ghost border-gray-300 border-2">Close</button>
+            </div>
+            <div class="mb-4" v-if="collaborators.length > 0">
+                <h2 class="text-gray-400 text-sm mb-2 mt-4">Collaborators on this list</h2>
+                <ul class="list-disc list-inside">
+                    <li class="text-gray-200 text-m mb-2" v-for="collaborator in collaborators" :key="collaborator.email">
+                        {{ collaborator.email }}
+                    </li>
+                </ul>
+            </div>
+            <div v-else>
+                <h2 class="text-gray-400 text-m mt-4">No collaborators on this list</h2>
             </div>
         </div>
 
@@ -422,6 +437,8 @@ const favoriteItemsList = ref([])
 const showEditItemPopup = ref(false)
 const showShareThisListPopup = ref(false)
 const collaboratorEmail = ref('')
+const collaborators = ref([])
+const showRemoveCollaboratorSuccess = ref(false)
 
 // Errors alerts
 const generalError = ref(false)
@@ -734,6 +751,24 @@ async function getCategories() {
     }
 }
 
+async function getCollaboratorsForSelectedList(selectedListId) {
+    try {
+        const xsrfToken = await getCsrfToken();
+
+        const response = await $fetch(`http://localhost:8000/api/shopping-lists/${selectedListId}/collaborators`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        })
+        collaborators.value = response
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
 
 // update list favorite
 async function favoriteList(listId) {
@@ -761,7 +796,7 @@ async function favoriteList(listId) {
     }
 }
 
-async function shareList() {
+async function addCollaborator() {
     try {
         const xsrfToken = await getCsrfToken();
         
@@ -777,7 +812,7 @@ async function shareList() {
             },
             credentials: 'include'
         })
-
+        addLocalCollaborators(collaboratorEmail.value)
         showSharedListSuccess.value = true
         setTimeout(() => showSharedListSuccess.value = false, 3000)
        
@@ -787,7 +822,28 @@ async function shareList() {
     }
 }
 
-
+async function removeCollaborator() {
+    try {
+        const xsrfToken = await getCsrfToken();
+        await $fetch(`http://localhost:8000/api/shared-lists/remove-collaborator/${selectedListId.value}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            body: {
+                collaborator_email: collaboratorEmail.value
+            },
+            credentials: 'include'
+        })
+        removeLocalCollaborators(collaboratorEmail.value)
+        showRemoveCollaboratorSuccess.value = true
+        setTimeout(() => showRemoveCollaboratorSuccess.value = false, 3000)
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
 // ---------------------------------------------------- other functions ----------------------------------------------------
 async function handleSignOut() {
     try {
@@ -815,8 +871,8 @@ function handleListClick(listId) {
     selectedListItems.value = list?.items || []
     isFavorite.value = list?.is_favorite || false
     selectedListId.value = listId
-    handleFavoriteList()
     sortSelectedListItemsByCategory()
+    clearCollaborators()
 }
 
 
@@ -941,7 +997,7 @@ function handleFavoriteList() {
     shoppingLists.value.forEach(list => {
         if (list.items) {
             list.items.forEach(item => {
-                if (item.is_favorite) {
+                if (item.is_favorite && !favoriteItemsList.value.find(favoriteItem => favoriteItem.name.toLowerCase() === item.name.toLowerCase())) {
                     favoriteItemsList.value.push(item)
                 }
             })
@@ -1151,9 +1207,27 @@ function addListToFavorites(listId) {
     favoriteList(listId)
 }
 
+function clearCollaborators() {
+    collaborators.value = []
+}
+
 function flipFavoriteStatus(listId) {
     const listIndex = shoppingLists.value.findIndex(list => list.id === listId)
     shoppingLists.value[listIndex].is_favorite = !isFavorite.value
     isFavorite.value = !isFavorite.value
+}
+
+function addLocalCollaborators(email) {
+    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+    if (listIndex !== -1) {
+        collaborators.value.push({email: email})
+    }
+}
+
+function removeLocalCollaborators(email) {
+    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+    if (listIndex !== -1) {
+        collaborators.value.pop(email)
+    }
 }
 </script>
