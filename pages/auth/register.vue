@@ -50,6 +50,7 @@
             </div>
             <div class="form-control mt-6">
               <button type="submit" class="btn btn-primary">Register</button>
+              <p class="text-gray-400 text-sm mt-2">Already have an account? <NuxtLink to="/auth/login" class="text-blue-500">Login</NuxtLink></p>
             </div>
           </form>
         </div>

@@ -141,7 +141,7 @@
                                 <input @click="toggleItem(item.id)" type="checkbox" class="checkbox"
                                     :checked="item.is_checked" />
                             </div>
-                            <div class="flex-1 pl-10 pr-30">
+                            <div class="flex-1 pl-10 text-left">
                                 <p v-if="item.name.length < 70">
                                     {{ item.name }}
                                 </p>
@@ -149,11 +149,11 @@
                                     {{ item.name.slice(0, 70) + '...' }}
                                 </p>
                             </div>
-                            <div class="w-24 pr-32.5">
+                            <div class="w-24 pr-31">
                                 {{ getCategoryName(item.category_id) }}
                             </div>
-                            <div class="w-24 text-left pr-20">x{{ item.quantity }}</div>
-                            <div class="text-left pr-10">
+                            <div class="w-24 text-left pl-2">x{{ item.quantity }}</div>
+                            <div class="text-left pr-8">
                                 <p> {{ item.price_per_unit }} DKK</p>
                             </div>
                             <div class="w-30 pl-6">
@@ -191,68 +191,91 @@
 
 
             <!-- ---------------------------------------------------- Today & Yesterday ---------------------------------------------------- -->
-            <h1 class="text-1xl ml-3 mb-2">Today & Yesterday</h1>
-            <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in todayAndYesterdayLists" :key="list.id" class="mb-2">
-                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
-                        :class="{ 'border-white rounded-md': selectedListId === list.id }">
-                        <p v-if="list.name.length < 30">
-                            {{ list.name }}
-                        </p>
-                        <p v-else>
-                            {{ list.name.slice(0, 30) + '...' }}
-                        </p>
-                    </a>
-                </li>
-            </ul>
-
+            <div>
+                <h1 class="text-xl text-center w-full mb-2">Today & Yesterday</h1>
+                <ul class="menu bg-base-200 text-base-content w-80 p-4">
+                    <li v-for="list in todayAndYesterdayLists" :key="list.id" class="mb-2">
+                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                            :class="{ 'border-white rounded-md': selectedListId === list.id }">
+                            <p v-if="list.name.length < 30">
+                                {{ list.name }}
+                            </p>
+                            <p v-else>
+                                {{ list.name.slice(0, 30) + '...' }}
+                            </p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
 
             <!-- ---------------------------------------------------- Older than 3 days ---------------------------------------------------- -->
-            <h1 class="text-1xl ml-3 mb-2">Older than 3 days</h1>
-            <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in olderLists" :key="list.id">
-                    <a @click="handleListClick(list.id)"
-                        :class="{ 'border-2 border-gray-300 rounded-md': selectedListId === list.id }">
-                        <p v-if="list.name.length < 30">
-                            {{ list.name }}
-                        </p>
-                        <p v-else>
-                            {{ list.name.slice(0, 30) + '...' }}
-                        </p>
-                    </a>
-                </li>
-            </ul>
-
+            <div>
+                <h1 class="text-xl text-center w-full mb-2">Older than 3 days</h1>
+                <ul class="menu bg-base-200 text-base-content w-80 p-4">
+                    <li v-for="list in olderLists" :key="list.id">
+                        <a @click="handleListClick(list.id)"
+                            :class="{ 'border-2 border-gray-300 rounded-md': selectedListId === list.id }">
+                            <p v-if="list.name.length < 30">
+                                {{ list.name }}
+                            </p>
+                            <p v-else>
+                                {{ list.name.slice(0, 30) + '...' }}
+                            </p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
 
             <!-- ---------------------------------------------------- Favorite  ---------------------------------------------------- -->
-            <h1 class="text-1xl ml-3 mb-2">Favorite lists</h1>
-
-            <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in favoriteListDefaultList" :key="list.id" class="mb-2">
-                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
-                        :class="{ 'border-white rounded-md': selectedListId === list.id }">
-                        <p v-if="list.name.length < 30">
-                            {{ list.name }}
-                        </p>
-                        <p v-else>
-                            {{ list.name.slice(0, 30) + '...' }}
-                        </p>
-                    </a>
-                </li>
-            </ul>
+            <div>
+                <h1 class="text-xl text-center w-full mb-2">Favorite lists</h1>
+                <ul class="menu bg-base-200 text-base-content w-80 p-4">
+                    <li v-for="list in favoriteListDefaultList" :key="list.id" class="mb-2">
+                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                            :class="{ 'border-white rounded-md': selectedListId === list.id }">
+                            <p v-if="list.name.length < 30">
+                                {{ list.name }}
+                            </p>
+                            <p v-else>
+                                {{ list.name.slice(0, 30) + '...' }}
+                            </p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
 
             <!-- ---------------------------------------------------- Shared lists ---------------------------------------------------- -->
-            <h1 class="text-1xl ml-3 mb-2">Shared lists</h1>
-            <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                <li v-for="list in sharedLists" :key="list.id">
-                    <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
-                        :class="{ 'border-white rounded-md': selectedListId === list.id }">
-                        <p v-if="list.shopping_list && list.shopping_list.name">
-                            {{ list.shopping_list.name.length < 30 ? list.shopping_list.name : list.shopping_list.name.slice(0, 30) + '...' }}
-                        </p>
-                    </a>
-                </li>
-            </ul>
+            <div>
+                <h1 class="text-xl text-center w-full mb-2">Shared lists</h1>
+                <h2 class="text-gray-200 text-sm mb-2 w-full text-center">Your shared lists</h2>
+                <ul class="menu bg-base-200 text-base-content w-80 p-4">
+                    <li v-for="list in sharedListOwnedByMe" :key="list.id">
+                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                            :class="{ 'border-white rounded-md': selectedListId === list.id }">
+                            <p v-if="list.name.length < 30">
+                                {{ list.name }}
+                            </p>
+                            <p v-else>
+                                {{ list.name.slice(0, 30) + '...' }}
+                            </p>
+                        </a>
+                    </li>
+                </ul>
+                <h2 class="text-gray-200 text-sm mb-2 ml-6">Shared lists with you</h2>
+                <ul class="menu bg-base-200 text-base-content w-80 p-4">
+                    <li v-for="list in sharedListsWithMe" :key="list.id">
+                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                            :class="{ 'border-white rounded-md': selectedListId === list.id }">
+                            <p v-if="list.name.length < 30">
+                                {{ list.name }}
+                            </p>
+                            <p v-else>
+                                {{ list.name.slice(0, 30) + '...' }}
+                            </p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -463,7 +486,8 @@ const showShareThisListPopup = ref(false)
 const collaboratorEmail = ref('')
 const collaborators = ref([])
 const showRemoveCollaboratorSuccess = ref(false)
-const sharedLists = ref([])
+const sharedListsWithMe = ref([])
+const sharedListOwnedByMe = ref([])
 const loggedInUserEmail = ref('')
 
 // Errors alerts
@@ -571,8 +595,9 @@ onMounted(async () => {
         handleListClick(shoppingLists.value[0].id)
         getCategories()
         handleFavoriteList()
-        getSharedLists()
         getLoggedInUser()
+        getSharedSharedWithMe()
+        getSharedByMe()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -772,7 +797,6 @@ async function getCategories() {
             credentials: 'include'
         })
         categories.value = response
-        console.log(categories)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -873,19 +897,35 @@ async function removeCollaborator() {
     }
 }
 
-async function getSharedLists() {
+async function getSharedSharedWithMe() {
     try {
         const xsrfToken = await getCsrfToken();
 
-        const response = await $fetch('http://localhost:8000/api/shared-lists', {
+        const response = await $fetch('http://localhost:8000/api/shared-lists/shared-with-me', {
             headers: {
                 'Accept': 'application/json',
                 'X-XSRF-TOKEN': xsrfToken
             },
             credentials: 'include'
         })
-        sharedLists.value = response
-        //console.log(sharedLists.value)
+        sharedListsWithMe.value = response
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
+async function getSharedByMe() {
+    try {
+        const xsrfToken = await getCsrfToken();
+        const response = await $fetch('http://localhost:8000/api/shared-lists/shared-by-me', {
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        })
+        sharedListOwnedByMe.value = response
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
