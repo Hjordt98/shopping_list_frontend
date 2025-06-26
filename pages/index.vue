@@ -12,7 +12,7 @@
                         Create New Item in selected list
                     </button>
 
-                    <button v-if="selectedListId !== 'all-favorite-items'" @click="deleteList(selectedListId)"
+                    <button v-if="selectedListId !== 'all-favorite-items'" @click="deleteList()"
                         class="btn btn-ghost border-gray-300 border-2">
                         Delete selected list
                     </button>
@@ -110,7 +110,7 @@
                     <p v-else class="text-gray-400 text-sm mb-4">Name of this list can't be changed. All favorite items
                         are stored in this list.</p>
                     <input v-if="selectedListId !== 'all-favorite-items'" type="text" v-model="selectedListName"
-                        @blur="updateListName(selectedListId)" @keydown.enter="updateListName(selectedListId)"
+                        @blur="updateListName()" @keydown.enter="updateListName()"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
                     <h2 v-else class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">All Favorite
                         Items
@@ -134,7 +134,7 @@
                         <div v-for="item in selectedListItems" :key="item.id"
                             class="flex items-center border-b border-gray-700 last:border-b-0 py-2">
                             <div class="w-20 flex justify-start">
-                                <input @click="filterByFavoriteItemsFirst(item.id)" type="checkbox" class="checkbox"
+                                <input @click="toggleFavorite(item.id)" type="checkbox" class="checkbox"
                                     :checked="item.is_favorite" />
                             </div>
                             <div class="w-16 flex justify-start">
@@ -179,6 +179,8 @@
             </div>
 
 
+
+
             <!-- ---------------------------------------------------- Sidebar ---------------------------------------------------- -->
         </div>
         <div class="drawer-side bg-base-300 w-80 min-h-screen">
@@ -195,7 +197,7 @@
                 <h1 class="text-xl text-center w-full mb-2">Today & Yesterday</h1>
                 <ul class="menu bg-base-200 text-base-content w-80 p-4">
                     <li v-for="list in todayAndYesterdayLists" :key="list.id" class="mb-2">
-                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                        <a @click="handleListClick(list)" class="border-2 border-transparent block px-3 py-1"
                             :class="{ 'border-white rounded-md': selectedListId === list.id }">
                             <p v-if="list.name.length < 30">
                                 {{ list.name }}
@@ -213,7 +215,7 @@
                 <h1 class="text-xl text-center w-full mb-2">Older than 3 days</h1>
                 <ul class="menu bg-base-200 text-base-content w-80 p-4">
                     <li v-for="list in olderLists" :key="list.id">
-                        <a @click="handleListClick(list.id)"
+                        <a @click="handleListClick(list)"
                             :class="{ 'border-2 border-gray-300 rounded-md': selectedListId === list.id }">
                             <p v-if="list.name.length < 30">
                                 {{ list.name }}
@@ -231,7 +233,7 @@
                 <h1 class="text-xl text-center w-full mb-2">Favorite lists</h1>
                 <ul class="menu bg-base-200 text-base-content w-80 p-4">
                     <li v-for="list in favoriteListDefaultList" :key="list.id" class="mb-2">
-                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                        <a @click="handleListClick(list)" class="border-2 border-transparent block px-3 py-1"
                             :class="{ 'border-white rounded-md': selectedListId === list.id }">
                             <p v-if="list.name.length < 30">
                                 {{ list.name }}
@@ -250,7 +252,7 @@
                 <h2 class="text-gray-200 text-sm mb-2 w-full text-center">Your shared lists</h2>
                 <ul class="menu bg-base-200 text-base-content w-80 p-4">
                     <li v-for="list in sharedListOwnedByMe" :key="list.id">
-                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                        <a @click="handleListClick(list)" class="border-2 border-transparent block px-3 py-1"
                             :class="{ 'border-white rounded-md': selectedListId === list.id }">
                             <p v-if="list.name.length < 30">
                                 {{ list.name }}
@@ -261,16 +263,16 @@
                         </a>
                     </li>
                 </ul>
-                <h2 class="text-gray-200 text-sm mb-2 ml-6">Shared lists with you</h2>
+                <h2 class="text-gray-200 text-sm mb-2 w-full text-center">Shared lists with you</h2>
                 <ul class="menu bg-base-200 text-base-content w-80 p-4">
                     <li v-for="list in sharedListsWithMe" :key="list.id">
-                        <a @click="handleListClick(list.id)" class="border-2 border-transparent block px-3 py-1"
+                        <a @click="handleListClick(list)" class="border-2 border-transparent block px-3 py-1"
                             :class="{ 'border-white rounded-md': selectedListId === list.id }">
-                            <p v-if="list.name.length < 30">
-                                {{ list.name }}
+                            <p v-if="list.shopping_list.name.length < 30">
+                                {{ list.shopping_list.name }}
                             </p>
                             <p v-else>
-                                {{ list.name.slice(0, 30) + '...' }}
+                                {{ list.shopping_list.name.slice(0, 30) + '...' }}
                             </p>
                         </a>
                     </li>
@@ -489,6 +491,8 @@ const showRemoveCollaboratorSuccess = ref(false)
 const sharedListsWithMe = ref([])
 const sharedListOwnedByMe = ref([])
 const loggedInUserEmail = ref('')
+const loggedInUserId = ref('')
+const sharedListItems = ref([])
 
 // Errors alerts
 const generalError = ref(false)
@@ -549,6 +553,9 @@ const favoriteListDefaultList = computed(() => {
 // ---------------------------------------------------- misc ----------------------------------------------------
 const debouncedSaveList = useDebounceFn(async () => {
     try {
+        if (selectedListId.value === 'all-favorite-items') {
+            return
+        }
         const xsrfToken = await getCsrfToken();
 
         await $fetch(`http://localhost:8000/api/shopping-lists/${selectedListId.value}`, {
@@ -558,7 +565,6 @@ const debouncedSaveList = useDebounceFn(async () => {
                 'X-XSRF-TOKEN': xsrfToken
             },
             body: {
-                text: textareaValue.value,
                 name: selectedListName.value
             },
             credentials: 'include'
@@ -588,16 +594,17 @@ onMounted(async () => {
             credentials: 'include'
         })
         if (response.length === 0) {
-            createNewList()
+            await createNewList()
         }
         shoppingLists.value = response
         sortShoppingLists()
-        handleListClick(shoppingLists.value[0].id)
-        getCategories()
+        //handleListClick(shoppingLists.value[0].id)
+        await getCategories()
         handleFavoriteList()
-        getLoggedInUser()
-        getSharedSharedWithMe()
-        getSharedByMe()
+        //handleSharedWithMeLists()
+        await getLoggedInUser()
+        await getSharedSharedWithMe()
+        await getSharedByMe()
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -638,12 +645,12 @@ async function createNewList() {
 }
 
 // Delete list
-async function deleteList(id) {
+async function deleteList() {
     try {
         const xsrfToken = await getCsrfToken();
 
         // Delete the list
-        await $fetch(`http://localhost:8000/api/shopping-lists/${id}`, {
+        await $fetch(`http://localhost:8000/api/shopping-lists/${selectedListId.value}`, {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
@@ -651,7 +658,7 @@ async function deleteList(id) {
             },
             credentials: 'include'
         });
-        updateLocalShoppingListsWithDeletedList(id)
+        updateLocalShoppingListsWithDeletedList(selectedListId.value)
         selectedListId.value = null
         sortShoppingLists()
 
@@ -727,12 +734,12 @@ async function updateItem(itemId, name, quantity, is_checked, category_id, is_fa
     }
 }
 
-async function updateList(listId, updates) {
+async function updateList(updates) {
     try {
         const xsrfToken = await getCsrfToken();
 
         // Update the item
-        await $fetch(`http://localhost:8000/api/shopping-lists/${listId}`, {
+        await $fetch(`http://localhost:8000/api/shopping-lists/${selectedListId.value}`, {
             method: 'PATCH',
             headers: {
                 'Accept': 'application/json',
@@ -909,6 +916,7 @@ async function getSharedSharedWithMe() {
             credentials: 'include'
         })
         sharedListsWithMe.value = response
+        console.log('API call sharedListsWithMe', sharedListsWithMe.value)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -943,6 +951,7 @@ async function getLoggedInUser() {
             credentials: 'include'
         })
         loggedInUserEmail.value = response.email
+        loggedInUserId.value = response.id
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -961,377 +970,386 @@ async function handleSignOut() {
 
 
 // Handle list click
-function handleListClick(listId) {
-    if (listId === 'all-favorite-items') {
-        selectedListId.value = 'all-favorite-items'
-        selectedListItems.value = favoriteItemsList.value
-        handleFavoriteList()
-        sortSelectedListItemsByCategory()
-        return
-    }
-
-    const list = shoppingLists.value.find(list => list.id === listId)
-    selectedListName.value = list?.name || 'New Shopping List'
-    selectedListItems.value = list?.items || []
-    isFavorite.value = list?.is_favorite || false
-    selectedListId.value = listId
-    sortSelectedListItemsByCategory()
-    clearCollaborators()
-}
-
-
-
-
-
-// Toggle item
-function toggleItem(itemId) {
-    const item = selectedListItems.value.find(item => item.id === itemId);
-    if (item) {
-        updateItem(itemId, item.name, item.quantity, !item.is_checked, item.category_id, item.is_favorite, item.price_per_unit);
-    }
-}
-
-
-// Update list name
-async function updateListName(listId) {
-    try {
-        await updateList(listId, { name: selectedListName.value.trim() })
-        showUpdatedListName.value = true
-        setTimeout(() => showUpdatedListName.value = false, 3000)
-    } catch (error) {
-        generalError.value = true
-        setTimeout(() => generalError.value = false, 3000)
-    }
-}
-
-
-
-
-// Add item
-function addItem() {
-    const isValid = validateItemInputs(
-        newItemName.value,
-        newItemQuantity.value,
-        newItemCategory.value,
-        newItemPricePerUnit.value,
-        false
-    )
-    if (isValid) {
-        sortShoppingLists()
-        createNewItem()
-    }
-
-}
-
-
-// Open edit item popup
-function openEditItemPopup(item) {
-    editingItem.value = { ...item }
-    showEditItemPopup.value = true
-}
-
-
-// Get CSRF token
-async function getCsrfToken() {
-    // Ensure the CSRF cookie is set
-    await $fetch('http://localhost:8000/sanctum/csrf-cookie')
-
-    // Get the CSRF token from the cookie
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; XSRF-TOKEN=`);
-    if (parts.length === 2) {
-        return decodeURIComponent(parts.pop().split(';').shift());
-    }
-    throw new Error('CSRF token not found');
-}
-
-function getCategoryName(categoryId) {
-    // Use == for loose comparison (string/number), or convert both to Number
-    const cat = categories.value.find(c => c.id === categoryId)
-    return cat ? cat.name : 'Unknown'
-}
-
-function searchListItems() {
-    const searchItem = searchListItemInput.value.toLowerCase()
-    filterListInput.value = ''
-
-    if (searchItem.length > 0) {
-        selectedListItems.value = selectedListItems.value.filter(item => item.name.toLowerCase().includes(searchItem))
+function handleListClick(list) {
+    // If this is a shared list (from shared-with-me API)
+    if (list.shopping_list) {
+        selectedListId.value = list.shopping_list.id;
+        selectedListName.value = list.shopping_list.name;
+        selectedListItems.value = list.shopping_list.items || [];
+        isFavorite.value = list.shopping_list.is_favorite || false;
+        sortSelectedListItemsByCategory();
+        clearCollaboratorsProperty();
+    } else if (list.id === 'all-favorite-items') {
+        selectedListId.value = 'all-favorite-items';
+        selectedListName.value = 'All Favorite Items';
+        selectedListItems.value = favoriteItemsList.value;
+        isFavorite.value = true;
+        sortSelectedListItemsByCategory();
+        clearCollaboratorsProperty();
     } else {
-        if (selectedListId.value === 'all-favorite-items') {
-            selectedListItems.value = favoriteItemsList.value
+        // Owned list
+        selectedListId.value = list.id;
+        selectedListName.value = list.name;
+        selectedListItems.value = list.items || [];
+        isFavorite.value = list.is_favorite || false;
+        sortSelectedListItemsByCategory();
+        clearCollaboratorsProperty();
+    }
+}
+
+
+
+
+
+    // Toggle item
+    function toggleItem(itemId) {
+        const item = selectedListItems.value.find(item => item.id === itemId);
+        if (item) {
+            updateItem(itemId, item.name, item.quantity, !item.is_checked, item.category_id, item.is_favorite, item.price_per_unit);
+        }
+    }
+
+
+    // Update list name
+    async function updateListName() {
+        try {
+            await updateList({ name: selectedListName.value.trim() })
+            showUpdatedListName.value = true
+            setTimeout(() => showUpdatedListName.value = false, 3000)
+        } catch (error) {
+            generalError.value = true
+            setTimeout(() => generalError.value = false, 3000)
+        }
+    }
+
+
+
+
+    // Add item
+    function addItem() {
+        const isValid = validateItemInputs(
+            newItemName.value,
+            newItemQuantity.value,
+            newItemCategory.value,
+            newItemPricePerUnit.value,
+            false
+        )
+        if (isValid) {
+            sortShoppingLists()
+            createNewItem()
+        }
+
+    }
+
+
+    // Open edit item popup
+    function openEditItemPopup(item) {
+        editingItem.value = { ...item }
+        showEditItemPopup.value = true
+    }
+
+
+    // Get CSRF token
+    async function getCsrfToken() {
+        // Ensure the CSRF cookie is set
+        await $fetch('http://localhost:8000/sanctum/csrf-cookie')
+
+        // Get the CSRF token from the cookie
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; XSRF-TOKEN=`);
+        if (parts.length === 2) {
+            return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        throw new Error('CSRF token not found');
+    }
+
+    function getCategoryName(categoryId) {
+        // Use == for loose comparison (string/number), or convert both to Number
+        const cat = categories.value.find(c => c.id === categoryId)
+        return cat ? cat.name : 'Unknown'
+    }
+
+    function searchListItems() {
+        const searchItem = searchListItemInput.value.toLowerCase()
+        filterListInput.value = ''
+
+        if (searchItem.length > 0) {
+            selectedListItems.value = selectedListItems.value.filter(item => item.name.toLowerCase().includes(searchItem))
         } else {
-            selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+            if (selectedListId.value === 'all-favorite-items') {
+                selectedListItems.value = favoriteItemsList.value
+            } else {
+                selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+            }
+            searchListItemInput.value = ''
         }
+    }
+
+    function filterListByCategory() {
+        const selectedCategoryId = filterListInput.value
         searchListItemInput.value = ''
-    }
-}
 
-function filterListByCategory() {
-    const selectedCategoryId = filterListInput.value
-    searchListItemInput.value = ''
-
-    // we check if category is s
-    if (selectedCategoryId !== '') {
-        const originalItems = shoppingLists.value.find(list => list.id === selectedListId.value)?.items
-        selectedListItems.value = originalItems.filter(item => item.category_id === parseInt(selectedCategoryId))
-    } else {
-        selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items
-    }
-}
-
-// Toggle item
-async function filterByFavoriteItemsFirst(itemId) {
-    const item = selectedListItems.value.find(item => item.id === itemId);
-    if (item) {
-        await updateItem(itemId, item.name, item.quantity, item.is_checked, item.category_id, !item.is_favorite, item.price_per_unit);
-        handleFavoriteList()
-    }
-}
-
-function priotizeFavoriteItemsFirst() {
-    searchListItemInput.value = ''
-    filterListInput.value = ''
-    selectedListItems.value = selectedListItems.value.sort((a, b) => b.is_favorite - a.is_favorite)
-}
-
-function handleFavoriteList() {
-    // Clear the array first!
-    favoriteItemsList.value = [];
-    shoppingLists.value.forEach(list => {
-        if (list.items) {
-            list.items.forEach(item => {
-                if (item.is_favorite && !favoriteItemsList.value.find(favoriteItem => favoriteItem.name.toLowerCase() === item.name.toLowerCase())) {
-                    favoriteItemsList.value.push(item)
-                }
-            })
+        // we check if category is s
+        if (selectedCategoryId !== '') {
+            const originalItems = shoppingLists.value.find(list => list.id === selectedListId.value)?.items
+            selectedListItems.value = originalItems.filter(item => item.category_id === parseInt(selectedCategoryId))
+        } else {
+            selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items
         }
-    })
-}
-
-function sortSelectedListItemsByCategory() {
-    selectedListItems.value = selectedListItems.value.sort((a, b) => a.category_id - b.category_id)
-}
-
-function updateLocalListItems(itemId, name, quantity, category_id, is_favorite, price_per_unit) {
-
-    // Update local state in selectedListItems
-    const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
-    if (itemIndex !== -1) {
-        selectedListItems.value[itemIndex] = {
-            ...selectedListItems.value[itemIndex],
-            name: name,
-            quantity: quantity,
-            category_id: category_id,
-            is_favorite: is_favorite,
-            price_per_unit: price_per_unit
-        };
     }
-}
 
-function updateLocalShoppingLists(itemId, name, quantity, category_id, is_checked, is_favorite) {
+    // Toggle item
+    async function toggleFavorite(itemId) {
+        const item = selectedListItems.value.find(item => item.id === itemId);
+        if (item) {
+            await updateItem(itemId, item.name, item.quantity, item.is_checked, item.category_id, !item.is_favorite, item.price_per_unit);
+            handleFavoriteList()
+        }
+    }
 
-    // Update the item in the main shoppingLists array
-    for (const list of shoppingLists.value) {
-        const idx = list.items.findIndex(item => item.id === itemId);
-        if (idx !== -1) {
-            list.items[idx] = {
-                ...list.items[idx],
+    function priotizeFavoriteItemsFirst() {
+        searchListItemInput.value = ''
+        filterListInput.value = ''
+        selectedListItems.value = selectedListItems.value.sort((a, b) => b.is_favorite - a.is_favorite)
+    }
+
+    function handleFavoriteList() {
+        // Clear the array first!
+        favoriteItemsList.value = [];
+        shoppingLists.value.forEach(list => {
+            if (list.items) {
+                list.items.forEach(item => {
+                    if (item.is_favorite && !favoriteItemsList.value.find(favoriteItem => favoriteItem.name.toLowerCase() === item.name.toLowerCase())) {
+                        favoriteItemsList.value.push(item)
+                    }
+                })
+            }
+        })
+    }
+
+    function sortSelectedListItemsByCategory() {
+        selectedListItems.value = selectedListItems.value.sort((a, b) => a.category_id - b.category_id)
+    }
+
+    function updateLocalListItems(itemId, name, quantity, category_id, is_favorite, price_per_unit) {
+
+        // Update local state in selectedListItems
+        const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
+        if (itemIndex !== -1) {
+            selectedListItems.value[itemIndex] = {
+                ...selectedListItems.value[itemIndex],
                 name: name,
                 quantity: quantity,
                 category_id: category_id,
-                is_checked: is_checked,
-                is_favorite: is_favorite
+                is_favorite: is_favorite,
+                price_per_unit: price_per_unit
             };
-            break;
         }
     }
-}
 
-function clearForm() {
-    newItemName.value = ''
-    newItemQuantity.value = ''
-    newItemCategory.value = ''
-    newItemIsFavorite.value = false
-    newItemPricePerUnit.value = ''
-}
+    function updateLocalShoppingLists(itemId, name, quantity, category_id, is_checked, is_favorite) {
 
-function updateLocalShoppingListsWithNewItem(newItem) {
-    //updaet the local list with the new item
-    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
-    if (listIndex !== -1) {
-        shoppingLists.value[listIndex].items.push(newItem)
-    }
-}
-
-function updateLocalShoppingListsWithNewList(newList) {
-    shoppingLists.value.push(newList)
-}
-
-function updateLocalShoppingListsWithUpdatedList(listId, updates) {
-    // Update local state
-    const listIndex = shoppingLists.value.findIndex(list => list.id === listId);
-    if (listIndex !== -1) {
-        shoppingLists.value[listIndex] = { ...shoppingLists.value[listIndex], ...updates };
-    }
-}
-
-function updateLocalShoppingListsWithDeletedList(listId) {
-    shoppingLists.value = shoppingLists.value.filter(list => list.id !== listId)
-}
-
-function sortShoppingLists() {
-    shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-}
-
-async function checkIfListisEmpty() {
-    if (
-        shoppingLists.value.length === 0 &&
-        olderLists.value.length === 0 &&
-        favoriteLists.value.length === 0
-    ) {
-        await createNewList()
-        showLastListDeleted.value = true
-        setTimeout(() => showLastListDeleted.value = false, 3000)
-    } else if (shoppingLists.value.length > 0) {
-        showDeleteSuccess.value = true
-        setTimeout(() => showDeleteSuccess.value = false, 3000)
-    }
-}
-
-function validateItemInputs(name, quantity, category, pricePerUnit, isEditing = false) {
-
-    let hasErrors = false
-
-    if (isEmpty(name) || name.trim() === '') {
-        if (isEditing) {
-            editingItemNameError.value = 'Item name is required. Please enter a name for the item.'
-        } else {
-            newItemNameError.value = 'Item name is required. Please enter a name for the item.'
+        // Update the item in the main shoppingLists array
+        for (const list of shoppingLists.value) {
+            const idx = list.items.findIndex(item => item.id === itemId);
+            if (idx !== -1) {
+                list.items[idx] = {
+                    ...list.items[idx],
+                    name: name,
+                    quantity: quantity,
+                    category_id: category_id,
+                    is_checked: is_checked,
+                    is_favorite: is_favorite
+                };
+                break;
+            }
         }
-        hasErrors = true
     }
 
-    if (!isInteger(quantity)) {
-        if (isEditing) {
-            editingItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
-        } else {
-            newItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
+    function clearForm() {
+        newItemName.value = ''
+        newItemQuantity.value = ''
+        newItemCategory.value = ''
+        newItemIsFavorite.value = false
+        newItemPricePerUnit.value = ''
+    }
+
+    function updateLocalShoppingListsWithNewItem(newItem) {
+        //updaet the local list with the new item
+        const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+        if (listIndex !== -1) {
+            shoppingLists.value[listIndex].items.push(newItem)
         }
-        hasErrors = true
     }
 
-    if (isEmpty(category)) {
-        if (isEditing) {
-            editingItemCategoryError.value = 'Category is required. Please pick a category.'
-        } else {
-            newItemCategoryError.value = 'Category is required. Please pick a category.'
+    function updateLocalShoppingListsWithNewList(newList) {
+        shoppingLists.value.push(newList)
+    }
+
+    function updateLocalShoppingListsWithUpdatedList(listId, updates) {
+        // Update local state
+        const listIndex = shoppingLists.value.findIndex(list => list.id === listId);
+        if (listIndex !== -1) {
+            shoppingLists.value[listIndex] = { ...shoppingLists.value[listIndex], ...updates };
         }
-        hasErrors = true
     }
 
-    if (isEmpty(pricePerUnit)) {
-        if (isEditing) {
-            editingItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
-        } else {
-            newItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
+    function updateLocalShoppingListsWithDeletedList(listId) {
+        shoppingLists.value = shoppingLists.value.filter(list => list.id !== listId)
+    }
+
+    function sortShoppingLists() {
+        shoppingLists.value.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+    }
+
+    async function checkIfListisEmpty() {
+        if (
+            shoppingLists.value.length === 0 &&
+            olderLists.value.length === 0 &&
+            favoriteLists.value.length === 0
+        ) {
+            await createNewList()
+            showLastListDeleted.value = true
+            setTimeout(() => showLastListDeleted.value = false, 3000)
+        } else if (shoppingLists.value.length > 0) {
+            showDeleteSuccess.value = true
+            setTimeout(() => showDeleteSuccess.value = false, 3000)
         }
-        hasErrors = true
     }
 
-    const priceStr = pricePerUnit.toString()
-    if (!/^\d+(\.\d{1,2})?$/.test(priceStr)) {
-        newItemPricePerUnitError.value = 'Price per unit can have maximum 2 decimal places.'
-        hasErrors = true
+    function validateItemInputs(name, quantity, category, pricePerUnit, isEditing = false) {
+
+        let hasErrors = false
+
+        if (isEmpty(name) || name.trim() === '') {
+            if (isEditing) {
+                editingItemNameError.value = 'Item name is required. Please enter a name for the item.'
+            } else {
+                newItemNameError.value = 'Item name is required. Please enter a name for the item.'
+            }
+            hasErrors = true
+        }
+
+        if (!isInteger(quantity)) {
+            if (isEditing) {
+                editingItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
+            } else {
+                newItemQuantityError.value = 'Quantity must be a whole number. Please enter a valid quantity.'
+            }
+            hasErrors = true
+        }
+
+        if (isEmpty(category)) {
+            if (isEditing) {
+                editingItemCategoryError.value = 'Category is required. Please pick a category.'
+            } else {
+                newItemCategoryError.value = 'Category is required. Please pick a category.'
+            }
+            hasErrors = true
+        }
+
+        if (isEmpty(pricePerUnit)) {
+            if (isEditing) {
+                editingItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
+            } else {
+                newItemPricePerUnitError.value = 'Value can not be empty and must be a positive number or 0.'
+            }
+            hasErrors = true
+        }
+
+        const priceStr = pricePerUnit.toString()
+        if (!/^\d+(\.\d{1,2})?$/.test(priceStr)) {
+            newItemPricePerUnitError.value = 'Price per unit can have maximum 2 decimal places.'
+            hasErrors = true
+        }
+
+
+
+        return !hasErrors
     }
 
-
-
-    return !hasErrors
-}
-
-function updateItemWithValidation() {
-    const isValid = validateItemInputs(
-        editingItem.value.name,
-        editingItem.value.quantity,
-        editingItem.value.category_id,
-        editingItem.value.price_per_unit,
-        true
-    )
-
-    if (isValid) {
-        updateItem(
-            editingItem.value.id,
+    function updateItemWithValidation() {
+        const isValid = validateItemInputs(
             editingItem.value.name,
             editingItem.value.quantity,
-            editingItem.value.is_checked,
             editingItem.value.category_id,
-            editingItem.value.is_favorite,
-            editingItem.value.price_per_unit
+            editingItem.value.price_per_unit,
+            true
         )
-    }
-}
 
-function removeLocalListItems(itemId) {
-    const listIndex = selectedListItems.value.findIndex(item => item.id === itemId)
-    if (listIndex !== -1) {
-        selectedListItems.value.splice(listIndex, 1)
-    }
-
-    for (const list of shoppingLists.value) {
-        const itemIndex = list.items.findIndex(item => item.id === itemId)
-        if (itemIndex !== -1) {
-            list.items.splice(itemIndex, 1)
+        if (isValid) {
+            updateItem(
+                editingItem.value.id,
+                editingItem.value.name,
+                editingItem.value.quantity,
+                editingItem.value.is_checked,
+                editingItem.value.category_id,
+                editingItem.value.is_favorite,
+                editingItem.value.price_per_unit
+            )
         }
     }
-}
 
-function clearItemErrors() {
-    editingItemQuantityError.value = ''
-    editingItemCategoryError.value = ''
-    editingItemPricePerUnitError.value = ''
-    editingItemNameError.value = ''
-    newItemQuantityError.value = ''
-    newItemCategoryError.value = ''
-    newItemPricePerUnitError.value = ''
-    newItemNameError.value = ''
-}
+    function removeLocalListItems(itemId) {
+        const listIndex = selectedListItems.value.findIndex(item => item.id === itemId)
+        if (listIndex !== -1) {
+            selectedListItems.value.splice(listIndex, 1)
+        }
 
-
-function updateSelectedListName() {
-    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
-    if (listIndex !== -1) {
-        shoppingLists.value[listIndex].name = selectedListName.value
-        const [updatedList] = shoppingLists.value.splice(listIndex, 1)
-        shoppingLists.value.unshift(updatedList)
+        for (const list of shoppingLists.value) {
+            const itemIndex = list.items.findIndex(item => item.id === itemId)
+            if (itemIndex !== -1) {
+                list.items.splice(itemIndex, 1)
+            }
+        }
     }
-}
 
-function addListToFavorites(listId) {
-    favoriteList(listId)
-}
-
-function clearCollaborators() {
-    collaborators.value = []
-}
-
-function flipFavoriteStatus(listId) {
-    const listIndex = shoppingLists.value.findIndex(list => list.id === listId)
-    shoppingLists.value[listIndex].is_favorite = !isFavorite.value
-    isFavorite.value = !isFavorite.value
-}
-
-function addLocalCollaborators(email) {
-    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
-    if (listIndex !== -1) {
-        collaborators.value.push({ email: email })
+    function clearItemErrors() {
+        editingItemQuantityError.value = ''
+        editingItemCategoryError.value = ''
+        editingItemPricePerUnitError.value = ''
+        editingItemNameError.value = ''
+        newItemQuantityError.value = ''
+        newItemCategoryError.value = ''
+        newItemPricePerUnitError.value = ''
+        newItemNameError.value = ''
     }
-}
 
-function removeLocalCollaborators(email) {
-    const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
-    if (listIndex !== -1) {
-        collaborators.value.pop(email)
+
+    function updateSelectedListName() {
+        const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+        if (listIndex !== -1) {
+            shoppingLists.value[listIndex].name = selectedListName.value
+            const [updatedList] = shoppingLists.value.splice(listIndex, 1)
+            shoppingLists.value.unshift(updatedList)
+        }
     }
-}
+
+    function addListToFavorites(listId) {
+        favoriteList(listId)
+    }
+
+    function clearCollaboratorsProperty() {
+        collaborators.value = []
+    }
+
+    function flipFavoriteStatus(listId) {
+        const listIndex = shoppingLists.value.findIndex(list => list.id === listId)
+        shoppingLists.value[listIndex].is_favorite = !isFavorite.value
+        isFavorite.value = !isFavorite.value
+    }
+
+    function addLocalCollaborators(email) {
+        const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+        if (listIndex !== -1) {
+            collaborators.value.push({ email: email })
+        }
+    }
+
+    function removeLocalCollaborators(email) {
+        const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
+        if (listIndex !== -1) {
+            collaborators.value.pop(email)
+        }
+    }
 </script>
