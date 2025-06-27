@@ -7,21 +7,20 @@
             <!-- ---------------------------------------------------- Buttons ---------------------------------------------------- -->
             <div class="flex justify-between items-center p-6">
                 <div class="flex gap-x-4">
-                    <button @click="showCreateItemPopup = true, clearItemErrors()"
+                    <button v-if="isCreateNewItemButtonVisible" @click="showCreateItemPopup = true, clearItemErrors()"
                         class="btn btn-ghost border-gray-300 border-2">
                         Create New Item in selected list
                     </button>
 
-                    <button v-if="isRemoveListButtonVisible" @click="deleteList()"
+                    <button v-if="isDeleteListButtonVisible" @click="deleteList()"
                         class="btn btn-ghost border-gray-300 border-2">
                         Delete selected list
                     </button>
-                    <button v-if="selectedListId !== 'all-favorite-items'" @click="addListToFavorites(selectedListId)"
+                    <button v-if="isFavoriteListButtonVisible" @click="addListToFavorites(selectedListId)"
                         class="btn btn-ghost border-gray-300 border-2">
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
-                    <button @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId)"
-                        class="btn btn-ghost border-gray-300 border-2">
+                    <button @click="showShareThisListPopup = true" class="btn btn-ghost border-gray-300 border-2">
                         Manage collaborators
                     </button>
                 </div>
@@ -340,36 +339,69 @@
     <!-- ---------------------------------------------------- Share this list popup ---------------------------------------------------- -->
 
     <div v-if="showShareThisListPopup" class="fixed inset-0 flex items-center justify-center">
-        <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
-            <h2 class="text-gray-400 text-sm mb-2">IMPORTANT! Only share this list with users you trust.</h2>
-            <h2 class="text-gray-400 text-sm mb-2">Add a collaborator: Enter the email of a user. Then click "Share
-                list" to share this list with them.</h2>
-            <h2 class="text-gray-400 text-sm mb-2">Remove a collaborator: Enter the email of a user. Then click "Remove
-                collaborator" to remove them from this list.</h2>
-            <input type="text" v-model="collaboratorEmail" placeholder="Enter user email"
-                class="input input-bordered w-full" />
-            <div class="flex gap-x-4 mt-4">
-                <button @click="addCollaborator" class="btn btn-ghost border-gray-300 border-2">Add
-                    collaborator</button>
-                <button @click="removeCollaborator" class="btn btn-ghost border-gray-300 border-2">Remove
-                    collaborator</button>
-                <button @click="showShareThisListPopup = false"
-                    class="btn btn-ghost border-gray-300 border-2">Close</button>
+        <div class="flex flex-col gap-y-4">
+            <div class="flex flex-col gap-y-4 bg-gray-800 border-4 border-gray-300 p-10 z-[10000] mb-4">
+                <h2 class="text-gray-400 text-sm">IMPORTANT! Only share lists with users you trust.</h2>
+                <h2 class="text-gray-400 text-sm ">Enter the email and name of list. Use the left box to add a
+                    collaborator. Use the right box to remove a collaborator.</h2>
+
             </div>
-            <div class="mb-4" v-if="collaborators.length > 0">
-                <h2 class="text-gray-400 text-sm mb-2 mt-4">Collaborators on this list</h2>
-                <ul class="list-disc list-inside">
-                    <li class="text-gray-200 text-m mb-2" v-for="collaborator in collaborators"
-                        :key="collaborator.email">
-                        {{ collaborator.email }}
-                    </li>
-                </ul>
-            </div>
-            <div v-else>
-                <h2 class="text-gray-400 text-m mt-4">No collaborators on this list</h2>
+
+            <div class="flex gap-x-4">
+                <div class="flex flex-col gap-y-4">
+                    <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
+                        <p class="text-gray-400 text-sm mb-2">Enter the email of the user you want to add to the
+                            list in the box below.</p>
+                        <input type="text" v-model="collaboratorEmail" placeholder="Enter user email"
+                            class="input input-bordered w-full" />
+                        <div class="flex gap-x-4 mt-4">
+
+                            <button @click="addCollaborator" class="btn btn-ghost border-gray-300 border-2">Add
+                                collaborator</button>
+
+                            <button @click="showShareThisListPopup = false"
+                                class="btn btn-ghost border-gray-300 border-2">Close</button>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
+                        <h2 class="text-gray-400 text-l mb-2">Lists you own, and have NOT shared</h2>
+                        <ul>
+                            <li v-for="list in notSharedLists" :key="list.id">
+                                {{ list.name }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-y-4">
+                    <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
+                        <p class="text-gray-400 text-sm mb-2">Enter the email of the user you want to remove from the
+                            list in the box below.</p>
+                        <input type="text" v-model="collaboratorEmail" placeholder="Enter user email"
+                            class="input input-bordered w-full" />
+                        <div class="flex gap-x-4 mt-4">
+                            <button @click="removeCollaborator" class="btn btn-ghost border-gray-300 border-2">Remove
+                                collaborator</button>
+                            <button @click="showShareThisListPopup = false"
+                                class="btn btn-ghost border-gray-300 border-2">Close</button>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800 border-4 border-gray-300 p-10 z-[10000] min-h-[200px]">
+                        <h2 class="text-gray-400 text-l mb-2">Lists you own, and have shared</h2>
+                        <ul>
+                            <li v-for="list in sharedListOwnedByMe" :key="list.id">
+                                <span class="font-semibold">{{ list.name }}</span>
+                                <ul>
+                                    <li v-for="collaborator in list.collaborators" :key="collaborator.id">
+                                        {{ collaborator.email }} ({{ collaborator.name }})
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
-
     </div>
 
 
@@ -450,6 +482,10 @@ const selectedListId = ref(null)
 const selectedListName = ref('')
 const selectedListItems = ref([])
 
+
+const sharedListsWithMe = ref([])
+const sharedListOwnedByMe = ref([])
+
 // Editing item
 const editingItem = ref()
 
@@ -485,8 +521,7 @@ const showShareThisListPopup = ref(false)
 const collaboratorEmail = ref('')
 const collaborators = ref([])
 const showRemoveCollaboratorSuccess = ref(false)
-const sharedListsWithMe = ref([])
-const sharedListOwnedByMe = ref([])
+
 const loggedInUserEmail = ref('')
 const loggedInUserId = ref('')
 const sharedListItems = ref([])
@@ -563,19 +598,49 @@ const isFavoriteToggleVisible = computed(() => {
     return false
 })
 
+
 const isDeleteListButtonVisible = computed(() => {
     if (selectedListId.value === 'all-favorite-items') {
         return false
     }
+    if (selectedListId.value === null) {
+        return false
+    }
+
     return true
 })
 
-const isRemoveListButtonVisible = computed(() => {
+const isFavoriteListButtonVisible = computed(() => {
     if (selectedListId.value === 'all-favorite-items') {
         return false
     }
+
+    if (selectedListId.value === null) {
+        return false
+    }
+
     return true
 })
+
+const isCreateNewItemButtonVisible = computed(() => {
+    if (selectedListId.value === 'all-favorite-items') {
+        return false
+    }
+
+    if (selectedListId.value === null) {
+        return false
+    }
+
+    return true
+})
+
+const sharedListIds = computed(() => new Set(sharedListOwnedByMe.value.map(list => list.id)))
+
+const notSharedLists = computed(() =>
+    shoppingLists.value.filter(list =>
+        !sharedListIds.value.has(list.id)
+    )
+);
 
 
 // ---------------------------------------------------- misc ----------------------------------------------------
@@ -625,14 +690,15 @@ onMounted(async () => {
             await createNewList()
         }
         shoppingLists.value = response
+        showShareThisListPopup.value = true
+        console.log('shoppingLists.value', shoppingLists.value)
         sortShoppingLists()
-        //handleListClick(shoppingLists.value[0].id)
         await getCategories()
         handleFavoriteList()
-        //handleSharedWithMeLists()
         await getLoggedInUser()
         await getSharedSharedWithMe()
         await getSharedByMe()
+
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -856,6 +922,24 @@ async function getCollaboratorsForSelectedList(selectedListId) {
     }
 }
 
+async function getCollaboratorsForAllLists() {
+    try {
+        const xsrfToken = await getCsrfToken();
+
+        const response = await $fetch('http://localhost:8000/api/shared-lists/collaborators', {
+            headers: {
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': xsrfToken
+            },
+            credentials: 'include'
+        })
+        collaborators.value = response
+    } catch (error) {
+        generalError.value = true
+        setTimeout(() => generalError.value = false, 3000)
+    }
+}
+
 
 // update list favorite
 async function favoriteList(listId) {
@@ -962,6 +1046,7 @@ async function getSharedByMe() {
             credentials: 'include'
         })
         sharedListOwnedByMe.value = response
+        console.log('API call sharedListOwnedByMe', sharedListOwnedByMe.value)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -1380,5 +1465,7 @@ function removeLocalCollaborators(email) {
         collaborators.value.pop(email)
     }
 }
+
+
 
 </script>

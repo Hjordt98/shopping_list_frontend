@@ -9,6 +9,7 @@
               <span class="label-text">Email</span>
             </label>
             <input 
+              autofocus
               type="email" 
               v-model="email" 
               class="input input-bordered" 
