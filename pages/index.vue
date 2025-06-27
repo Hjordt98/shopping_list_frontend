@@ -354,6 +354,8 @@
                             list in the box below.</p>
                         <input type="text" v-model="collaboratorEmail" placeholder="Enter user email"
                             class="input input-bordered w-full" />
+                        <input type="text" v-model="listName" placeholder="Enter list name"
+                            class="input input-bordered w-full" />
                         <div class="flex gap-x-4 mt-4">
 
                             <button @click="addCollaborator" class="btn btn-ghost border-gray-300 border-2">Add
@@ -521,6 +523,7 @@ const showShareThisListPopup = ref(false)
 const collaboratorEmail = ref('')
 const collaborators = ref([])
 const showRemoveCollaboratorSuccess = ref(false)
+const listName = ref('')
 
 const loggedInUserEmail = ref('')
 const loggedInUserId = ref('')
@@ -979,7 +982,8 @@ async function addCollaborator() {
                 'X-XSRF-TOKEN': xsrfToken
             },
             body: {
-                collaborator_email: collaboratorEmail.value
+                collaborator_email: collaboratorEmail.value,
+                list_name: listName.value
             },
             credentials: 'include'
         })
@@ -1455,14 +1459,14 @@ function flipFavoriteStatus(listId) {
 function addLocalCollaborators(email) {
     const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
     if (listIndex !== -1) {
-        collaborators.value.push({ email: email })
+        collaborators.value.push({ email: email, name: listName.value })
     }
 }
 
 function removeLocalCollaborators(email) {
     const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
     if (listIndex !== -1) {
-        collaborators.value.pop(email)
+        collaborators.value.pop(email, name)
     }
 }
 
