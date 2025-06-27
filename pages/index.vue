@@ -1380,4 +1380,5 @@ function removeLocalCollaborators(email) {
         collaborators.value.pop(email)
     }
 }
+
 </script>
