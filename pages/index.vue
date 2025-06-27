@@ -7,20 +7,21 @@
             <!-- ---------------------------------------------------- Buttons ---------------------------------------------------- -->
             <div class="flex justify-between items-center p-6">
                 <div class="flex gap-x-4">
-                    <button @click="showCreateItemPopup = true, clearItemErrors()"
+                    <button v-if="isCreateItemButtonVisible" @click="showCreateItemPopup = true, clearItemErrors()"
                         class="btn btn-ghost border-gray-300 border-2">
                         Create New Item in selected list
                     </button>
 
-                    <button v-if="isRemoveListButtonVisible" @click="deleteList()"
+                    <button v-if="isDeleteListButtonVisible" @click="deleteList()"
                         class="btn btn-ghost border-gray-300 border-2">
                         Delete selected list
                     </button>
-                    <button v-if="selectedListId !== 'all-favorite-items'" @click="addListToFavorites(selectedListId)"
+                    <button v-if="isFavoriteButtonVisible" @click="addListToFavorites(selectedListId)"
                         class="btn btn-ghost border-gray-300 border-2">
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
-                    <button @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId)"
+                    <button v-if="isManageCollaboratorsButtonVisible"
+                        @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId)"
                         class="btn btn-ghost border-gray-300 border-2">
                         Manage collaborators
                     </button>
@@ -173,7 +174,8 @@
                     <div v-else-if="selectedListId !== null && selectedListItems.length === 0"
                         class="text-gray-400 mt-4 text-center">No items in this list. Click "create new item" to add
                         items to this list.</div>
-                    <div v-else class="text-gray-400 mt-4 text-center">No list selected.</div>
+                    <div v-else class="text-gray-400 mt-4 text-center">No list selected. Select a list from the sidebar
+                        to view items in the list, or press "create new list" to create a new list.</div>
                 </div>
             </div>
 
@@ -563,20 +565,74 @@ const isFavoriteToggleVisible = computed(() => {
     return false
 })
 
+
+
 const isDeleteListButtonVisible = computed(() => {
     if (selectedListId.value === 'all-favorite-items') {
         return false
     }
-    return true
+
+    let list = shoppingLists.value.find(list => list.id === selectedListId.value)
+    if (list) return list.user_id === loggedInUserId.value
+
+    let shared = sharedListsWithMe.value.find(
+        list => list.shoppingList && list.shoppingList.id === selectedListId.value);
+
+    if (shared) return shared.shoppingList.user_id === loggedInUserId.value
+
+    return false
 })
 
-const isRemoveListButtonVisible = computed(() => {
+const isManageCollaboratorsButtonVisible = computed(() => {
     if (selectedListId.value === 'all-favorite-items') {
         return false
     }
-    return true
+
+    let list = shoppingLists.value.find(list => list.id === selectedListId.value)
+    if (list) return list.user_id === loggedInUserId.value
+
+    let shared = sharedListsWithMe.value.find(
+        list => list.shoppingList && list.shoppingList.id === selectedListId.value);
+
+    if (shared) return shared.shoppingList.user_id === loggedInUserId.value
+
+    return false
 })
 
+const isFavoriteButtonVisible = computed(() => {
+    if (selectedListId.value === 'all-favorite-items') {
+        return false
+    }
+
+    let list = shoppingLists.value.find(list => list.id === selectedListId.value)
+    if (list) return list.user_id === loggedInUserId.value
+
+    let shared = sharedListsWithMe.value.find(
+        list => list.shoppingList && list.shoppingList.id === selectedListId.value);
+
+    if (shared) return shared.shoppingList.user_id === loggedInUserId.value
+
+    return false
+})
+
+const isCreateItemButtonVisible = computed(() => {
+    if (selectedListId.value === 'all-favorite-items') {
+        return false
+    }
+    if (selectedListItems.value.length === 0) {
+        return false
+    }
+ 
+    let list = shoppingLists.value.find(list => list.id === selectedListId.value)
+    if (list) return list.user_id === loggedInUserId.value
+
+    let shared = sharedListsWithMe.value.find(
+        list => list.shoppingList && list.shoppingList.id === selectedListId.value);
+
+    if (shared) return shared.shoppingList.user_id === loggedInUserId.value
+
+    return true
+})
 
 // ---------------------------------------------------- misc ----------------------------------------------------
 const debouncedSaveList = useDebounceFn(async () => {
