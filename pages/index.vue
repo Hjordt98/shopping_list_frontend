@@ -125,7 +125,7 @@
                         <div class="w-24">Quantity</div>
                         <div class="w-32">Price per unit</div>
                         <div class="w-32">Total price</div>
-                        <div class="w-48">Actions</div>
+                        <div class="w-48 text-left">Actions</div>
                     </div>
 
 
@@ -159,13 +159,13 @@
                             <div class="w-30 pl-6">
                                 <p> {{ (item.price_per_unit * item.quantity).toFixed(2) }} DKK</p>
                             </div>
-                            <div class="w-32 flex justify-start">
+                            <div class="w-48 flex gap-2 justify-start">
                                 <button @click="deleteItem(item.id)"
                                     class="btn btn-ghost border-gray-300 border-2">Delete Item</button>
+                                <button @click="openEditItemPopup(item)" class="btn btn-ghost border-gray-300 border-2">
+                                    Edit Item
+                                </button>
                             </div>
-                            <button @click="openEditItemPopup(item)" class="btn btn-ghost border-gray-300 border-2">
-                                Edit Item
-                            </button>
                             <div v-if="updateItemLoading" class="w-32 flex justify-start">
                                 <span class="loading loading-spinner loading-xs"></span>
                             </div>
