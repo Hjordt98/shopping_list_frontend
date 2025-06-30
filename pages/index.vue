@@ -21,7 +21,7 @@
                         {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}
                     </button>
                     <button v-if="isManageCollaboratorsButtonVisible"
-                        @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId)"
+                        @click="showShareThisListPopup = true, getCollaboratorsForSelectedList(selectedListId), collaboratorEmail = ''"
                         class="btn btn-ghost border-gray-300 border-2">
                         Manage collaborators
                     </button>
@@ -109,7 +109,7 @@
                         in the new name. It will be saved automatically.</p>
                     <p v-else class="text-gray-400 text-sm mb-4">Name of this list can't be changed. All favorite items
                         are stored in this list.</p>
-                    <input v-if="selectedListId !== 'all-favorite-items'" type="text" v-model="selectedListName"
+                    <input v-if="isListnameEditable" type="text" v-model="selectedListName"
                         @blur="updateListName()" @keydown.enter="updateListName()"
                         class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
                     <h2 v-else class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">All Favorite
@@ -118,7 +118,7 @@
 
                     <!-- ---------------------------------------------------- Header row for items ----------------------------------------------- -->
                     <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
-                        <div v-if="isFavoriteToggleVisible" class="w-20">Favorite</div>
+                        <div v-if="isFavoriteToggleVisibleWhenViewingItems" class="w-20">Favorite</div>
                         <div class="w-20">Bought</div>
                         <div class="flex-1 pl-6">Item name</div>
                         <div class="w-32">Category</div>
@@ -133,7 +133,7 @@
                     <div v-if="selectedListItems.length && selectedListId !== null">
                         <div v-for="item in selectedListItems" :key="item.id"
                             class="flex items-center border-b border-gray-700 last:border-b-0 py-2">
-                            <div v-if="isFavoriteToggleVisible" class="w-20 flex justify-start">
+                            <div v-if="isFavoriteToggleVisibleWhenViewingItems" class="w-20 flex justify-start">
                                 <input @click="toggleFavorite(item.id)" type="checkbox" class="checkbox"
                                     :checked="item.is_favorite" />
                             </div>
@@ -172,7 +172,8 @@
                         </div>
                     </div>
                     <div v-else-if="selectedListId !== null && selectedListItems.length === 0"
-                        class="text-gray-400 mt-4 text-center">No items in this list. Click "create new item" to add
+                        class="text-gray-400 mt-4 text-center">No items in this list, or your search. Click "create new
+                        item" to add
                         items to this list.</div>
                     <div v-else class="text-gray-400 mt-4 text-center">No list selected. Select a list from the sidebar
                         to view items in the list, or press "create new list" to create a new list.</div>
@@ -249,8 +250,7 @@
 
             <!-- ---------------------------------------------------- Shared lists ---------------------------------------------------- -->
             <div>
-                <h1 class="text-xl text-center w-full mb-2">Shared lists</h1>
-                <h2 class="text-gray-200 text-sm mb-2 w-full text-center">Shared lists with you</h2>
+                <h1 class="text-xl text-center w-full mb-2">Shared lists with you</h1>
                 <ul class="menu bg-base-200 text-base-content w-80 p-4">
                     <li v-for="list in sharedListsWithMe" :key="list.shopping_list.id">
                         <a @click="handleListClick(list)" class="border-2 border-transparent block px-3 py-1 mb-2"
@@ -265,17 +265,6 @@
                     </li>
                 </ul>
 
-                <h2 class="text-gray-200 text-sm mb-2 w-full text-center">Your shared lists</h2>
-                <ul class="text-sm bg-base-200 text-base-content w-80 p-4 ml-4">
-                    <li v-for="list in sharedListOwnedByMe" :key="list.id">
-                        <p v-if="list.name.length < 30">
-                            {{ list.name }}
-                        </p>
-                        <p v-else>
-                            {{ list.name.slice(0, 30) + '...' }}
-                        </p>
-                    </li>
-                </ul>
             </div>
         </div>
     </div>
@@ -323,7 +312,7 @@
                     {{ newItemPricePerUnitError }}
                 </div>
             </div>
-            <div class="mb-4">
+            <div v-if="isFavoriteToggleVisibleWhenCreatingItem" class="mb-4">
                 <p class="text-gray-400 text-sm mb-2">Mark new item as favorite</p>
                 <div class="w-20 flex justify-start">
                     <input type="checkbox" class="checkbox" v-model="newItemIsFavorite" />
@@ -549,7 +538,7 @@ const favoriteListDefaultList = computed(() => {
     return [allFavoriteItems, ...favoriteLists.value]
 })
 
-const isFavoriteToggleVisible = computed(() => {
+const isFavoriteToggleVisibleWhenViewingItems = computed(() => {
     if (selectedListId.value === 'all-favorite-items') {
         return true
     }
@@ -584,6 +573,7 @@ const isDeleteListButtonVisible = computed(() => {
 })
 
 const isManageCollaboratorsButtonVisible = computed(() => {
+
     if (selectedListId.value === 'all-favorite-items') {
         return false
     }
@@ -619,10 +609,7 @@ const isCreateItemButtonVisible = computed(() => {
     if (selectedListId.value === 'all-favorite-items') {
         return false
     }
-    if (selectedListItems.value.length === 0) {
-        return false
-    }
- 
+
     let list = shoppingLists.value.find(list => list.id === selectedListId.value)
     if (list) return list.user_id === loggedInUserId.value
 
@@ -632,6 +619,21 @@ const isCreateItemButtonVisible = computed(() => {
     if (shared) return shared.shoppingList.user_id === loggedInUserId.value
 
     return true
+})
+
+const isFavoriteToggleVisibleWhenCreatingItem = computed(() => {
+
+    const list = shoppingLists.value.find(list => list.id === selectedListId.value);
+    if (!list) return false;
+    // Only show if the current user is the owner
+    return list.user_id === loggedInUserId.value;
+});
+
+const isListnameEditable = computed(() => {
+    const list = shoppingLists.value.find(list => list.id === selectedListId.value);
+    if (!list) return false;
+    // Only show if the current user is the owner
+    return list.user_id === loggedInUserId.value;
 })
 
 // ---------------------------------------------------- misc ----------------------------------------------------
@@ -682,10 +684,8 @@ onMounted(async () => {
         }
         shoppingLists.value = response
         sortShoppingLists()
-        //handleListClick(shoppingLists.value[0].id)
         await getCategories()
         handleFavoriteList()
-        //handleSharedWithMeLists()
         await getLoggedInUser()
         await getSharedSharedWithMe()
         await getSharedByMe()
@@ -801,18 +801,20 @@ async function updateItem(itemId, name, quantity, is_checked, category_id, is_fa
             credentials: 'include'
         });
 
-        updateLocalListItems(itemId, name, quantity, category_id, is_favorite, editingItemPricePerUnit)
+        console.log('updateItem completed for item', itemId)
+
+        updateLocalListItems(itemId, name, quantity, category_id, is_favorite, editingItemPricePerUnit, is_checked)
 
         updateLocalShoppingLists(itemId, name, quantity, category_id, is_checked, is_favorite)
 
         sortSelectedListItemsByCategory()
 
-        handleFavoriteList();
-
         showCreateItemSuccess.value = true;
         showEditItemPopup.value = false;
         setTimeout(() => showCreateItemSuccess.value = false, 3000);
     } catch (error) {
+        console.error('Error in updateItem:', error);
+        console.error('Error details:', error.response, error.status, error.data);
         generalError.value = true;
         setTimeout(() => generalError.value = false, 3000);
     }
@@ -1000,7 +1002,6 @@ async function getSharedSharedWithMe() {
             credentials: 'include'
         })
         sharedListsWithMe.value = response
-        console.log('API call sharedListsWithMe', sharedListsWithMe.value)
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -1119,8 +1120,8 @@ function addItem() {
         false
     )
     if (isValid) {
-        sortShoppingLists()
         createNewItem()
+        sortShoppingLists()
     }
 
 }
@@ -1160,7 +1161,7 @@ function searchListItems() {
     if (searchItem.length > 0) {
         selectedListItems.value = selectedListItems.value.filter(item => item.name.toLowerCase().includes(searchItem))
     } else {
-        if (selectedListId.value === 'all-favorite-items') {
+        if (selectedListId.value === 'all-favorite-items' && searchItem.length === 0) {
             selectedListItems.value = favoriteItemsList.value
         } else {
             selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
@@ -1215,7 +1216,7 @@ function sortSelectedListItemsByCategory() {
     selectedListItems.value = selectedListItems.value.sort((a, b) => a.category_id - b.category_id)
 }
 
-function updateLocalListItems(itemId, name, quantity, category_id, is_favorite, price_per_unit) {
+function updateLocalListItems(itemId, name, quantity, category_id, is_favorite, price_per_unit, is_checked) {
 
     // Update local state in selectedListItems
     const itemIndex = selectedListItems.value.findIndex(item => item.id === itemId);
@@ -1226,7 +1227,8 @@ function updateLocalListItems(itemId, name, quantity, category_id, is_favorite, 
             quantity: quantity,
             category_id: category_id,
             is_favorite: is_favorite,
-            price_per_unit: price_per_unit
+            price_per_unit: price_per_unit,
+            is_checked: is_checked
         };
     }
 }
@@ -1259,10 +1261,17 @@ function clearForm() {
 }
 
 function updateLocalShoppingListsWithNewItem(newItem) {
-    //updaet the local list with the new item
+    // Check if it's an owner list
     const listIndex = shoppingLists.value.findIndex(list => list.id === selectedListId.value)
     if (listIndex !== -1) {
         shoppingLists.value[listIndex].items.push(newItem)
+        return
+    }
+    
+    // Check if it's a collaborator list
+    const sharedListIndex = sharedListsWithMe.value.findIndex(list => list.shopping_list.id === selectedListId.value)
+    if (sharedListIndex !== -1) {
+        sharedListsWithMe.value[sharedListIndex].shopping_list.items.push(newItem)
     }
 }
 
