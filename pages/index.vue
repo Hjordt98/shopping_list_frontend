@@ -216,9 +216,9 @@
             <div>
                 <h1 class="text-xl text-center w-full mb-2">Older than 3 days</h1>
                 <ul class="menu bg-base-200 text-base-content w-80 p-4">
-                    <li v-for="list in olderLists" :key="list.id">
-                        <a @click="handleListClick(list)"
-                            :class="{ 'border-2 border-gray-300 rounded-md': selectedListId === list.id }">
+                    <li v-for="list in olderLists" :key="list.id" class="mb-2">
+                        <a @click="handleListClick(list)" class="border-2 border-transparent block px-3 py-1"
+                            :class="{ 'border-white rounded-md': selectedListId === list.id }">
                             <p v-if="list.name.length < 30">
                                 {{ list.name }}
                             </p>
@@ -381,7 +381,7 @@
                     {{ editingItemNameError }}
                 </div>
             </div>
-            <div>
+            <div v-if="selectedListId !== 'all-favorite-items'">
                 <p class="text-gray-400 text-sm mb-2">Category</p>
                 <select v-model="editingItem.category_id" class="select w-full mb-4">
                     <option disabled selected>Pick a category</option>
@@ -480,8 +480,6 @@ const sharedListsWithMe = ref([])
 const sharedListOwnedByMe = ref([])
 const loggedInUserEmail = ref('')
 const loggedInUserId = ref('')
-const sharedListItems = ref([])
-const isCollaborator = ref(false)
 
 // Errors alerts
 const generalError = ref(false)
@@ -745,8 +743,8 @@ async function createNewList() {
         });
 
         updateLocalShoppingListsWithNewList(newList)
-
-        handleListClick(newList.id)
+        await refreshLists()
+        handleListClick(newList)
 
         showCreateSuccess.value = true
         setTimeout(() => showCreateSuccess.value = false, 3000) // Hide after 3 seconds
@@ -771,11 +769,13 @@ async function deleteList() {
             },
             credentials: 'include'
         });
+    
         updateLocalShoppingListsWithDeletedList(selectedListId.value)
-        selectedListId.value = null
+        checkIfListisEmpty()
+        //selectedListId.value = null
         sortShoppingLists()
 
-        checkIfListisEmpty()
+     
     } catch (error) {
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
@@ -865,8 +865,9 @@ async function updateList(updates) {
             credentials: 'include'
         });
 
-        updateLocalShoppingListsWithUpdatedList(listId, updates)
+        updateLocalShoppingListsWithUpdatedList(selectedListId.value, updates)
     } catch (error) {
+        console.error('Error in updateList:', error)
         generalError.value = true
         setTimeout(() => generalError.value = false, 3000)
     }
@@ -1091,6 +1092,8 @@ function handleListClick(list) {
         selectedListName.value = list.shopping_list.name;
         selectedListItems.value = list.shopping_list.items || [];
         isFavorite.value = list.shopping_list.is_favorite || false;
+        filterListInput.value = ''
+        searchListItemInput.value = ''
         sortSelectedListItemsByCategory();
         clearCollaboratorsProperty();
     } else if (list.id === 'all-favorite-items') {
@@ -1098,6 +1101,8 @@ function handleListClick(list) {
         selectedListName.value = 'All Favorite Items';
         selectedListItems.value = favoriteItemsList.value;
         isFavorite.value = true;
+        filterListInput.value = ''
+        searchListItemInput.value = ''
         sortSelectedListItemsByCategory();
         clearCollaboratorsProperty();
     } else {
@@ -1106,6 +1111,8 @@ function handleListClick(list) {
         selectedListName.value = list.name;
         selectedListItems.value = list.items || [];
         isFavorite.value = list.is_favorite || false;
+        filterListInput.value = ''
+        searchListItemInput.value = ''
         sortSelectedListItemsByCategory();
         clearCollaboratorsProperty();
     }
@@ -1190,12 +1197,18 @@ function searchListItems() {
     if (searchItem.length > 0) {
         selectedListItems.value = selectedListItems.value.filter(item => item.name.toLowerCase().includes(searchItem))
     } else {
-        if (selectedListId.value === 'all-favorite-items' && searchItem.length === 0) {
+        if (selectedListId.value === 'all-favorite-items') {
             selectedListItems.value = favoriteItemsList.value
         } else {
-            selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+            // Check if it's a collaborator list
+            const sharedList = sharedListsWithMe.value.find(list => list.shopping_list.id === selectedListId.value)
+            if (sharedList) {
+                selectedListItems.value = sharedList.shopping_list.items || []
+            } else {
+                // Owned list
+                selectedListItems.value = shoppingLists.value.find(list => list.id === selectedListId.value)?.items || []
+            }
         }
-        searchListItemInput.value = ''
     }
 }
 
@@ -1330,7 +1343,11 @@ async function checkIfListisEmpty() {
         olderLists.value.length === 0 &&
         favoriteLists.value.length === 0
     ) {
-        await createNewList()
+        const newList = await createNewList()
+        // Select the new list (if createNewList doesn't already do this)
+        if (newList) {
+            handleListClick(newList)
+        }
         showLastListDeleted.value = true
         setTimeout(() => showLastListDeleted.value = false, 3000)
     } else if (shoppingLists.value.length > 0) {
@@ -1474,5 +1491,13 @@ function removeLocalCollaborators(email) {
         collaborators.value.pop(email)
     }
 }
+
+async function refreshLists() {
+         const response = await $fetch('http://localhost:8000/api/shopping-lists', {
+             credentials: 'include'
+         })
+         shoppingLists.value = response
+         sortShoppingLists()
+     }
 
 </script>
