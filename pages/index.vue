@@ -101,20 +101,20 @@
                 </div>
 
                 <div class="w-full max-w-[70vw] bg-base-200 rounded-lg p-4 shadow-md">
-                    <p v-if="selectedListId !== 'all-favorite-items'" class="text-gray-400 text-sm mb-4">To change the
-                        name of the list, click on the list name
-                        below
-                        and
-                        type
-                        in the new name. It will be saved automatically.</p>
-                    <p v-else class="text-gray-400 text-sm mb-4">Name of this list can't be changed. All favorite items
-                        are stored in this list.</p>
-                    <input v-if="isListnameEditable" type="text" v-model="selectedListName"
-                        @blur="updateListName()" @keydown.enter="updateListName()"
-                        class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
-                    <h2 v-else class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">All Favorite
-                        Items
-                    </h2>
+                    <div v-if="!isListnameEditable && selectedListId === null">
+                    </div>
+                    <div v-else-if="!isListnameEditable">
+                        <p class="text-gray-400 text-sm mb-4">{{ listNameEditMessage }}</p>
+                        <h2 class="w-full bg-transparent text-gray-400 mb-4 text-2xl font-bold">
+                            {{ selectedListName }}
+                        </h2>
+                    </div>
+                    <div v-else>
+                        <p class="text-gray-400 text-sm mb-4">{{ listNameEditMessage }}</p>
+                        <input type="text" v-model="selectedListName" @blur="updateListName()"
+                            @keydown.enter="updateListName()"
+                            class="w-full bg-transparent text-gray-400 hover:text-white focus:text-white focus:outline-none mb-4 text-2xl font-bold" />
+                    </div>
 
                     <!-- ---------------------------------------------------- Header row for items ----------------------------------------------- -->
                     <div class="flex items-center font-semibold text-gray-400 border-b border-gray-600 pb-2 mb-2">
@@ -630,10 +630,39 @@ const isFavoriteToggleVisibleWhenCreatingItem = computed(() => {
 });
 
 const isListnameEditable = computed(() => {
+    // "All Favorite Items" is not editable
+    if (selectedListId.value === 'all-favorite-items') {
+        return false;
+    }
+    
+    // Check if it's a collaborator list
+    const sharedList = sharedListsWithMe.value.find(list => list.shopping_list.id === selectedListId.value);
+    if (sharedList) {
+        return false; // Collaborator lists are not editable
+    }
+    
+    // Check if it's the user's own list
     const list = shoppingLists.value.find(list => list.id === selectedListId.value);
     if (!list) return false;
-    // Only show if the current user is the owner
+    
+    // Only editable if the current user is the owner
     return list.user_id === loggedInUserId.value;
+})
+
+const listNameEditMessage = computed(() => {
+    // "All Favorite Items" message
+    if (selectedListId.value === 'all-favorite-items') {
+        return "You can't change the name of this list. This list contains all items from all other personal lists which are marked as 'favorite'";
+    }
+    
+    // Check if it's a collaborator list
+    const sharedList = sharedListsWithMe.value.find(list => list.shopping_list.id === selectedListId.value);
+    if (sharedList) {
+        return "Only the original owner of this list can change the name of it. As a collaborator, you can still do everything else like it was your own personal list.";
+    }
+    
+    // User's own list message
+    return "To change the list name, press on the list name and enter the new name. The name of the list will save automatically, or you can press enter to confirm the new name";
 })
 
 // ---------------------------------------------------- misc ----------------------------------------------------
@@ -1267,7 +1296,7 @@ function updateLocalShoppingListsWithNewItem(newItem) {
         shoppingLists.value[listIndex].items.push(newItem)
         return
     }
-    
+
     // Check if it's a collaborator list
     const sharedListIndex = sharedListsWithMe.value.findIndex(list => list.shopping_list.id === selectedListId.value)
     if (sharedListIndex !== -1) {
